@@ -105,6 +105,8 @@ public:
 	//functions to enable/disable cubemap texture (in case of a skybox object)
 	void enableCubemap();
 	void disableCubemap();
+
+	void setSmoothShading(const bool& smooth);
 	//function to animate the object
 	virtual void animate(){}
 	//function to generate the mesh coordinates (uses addTriangle function in the base class)

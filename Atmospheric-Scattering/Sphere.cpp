@@ -97,7 +97,6 @@ void Sphere::generateMesh(){
 
 //function to calculate the smooth normals for a sphere
 void Sphere::smoothNormals(){
-	smooth = true;
 	vector<Vec3f> vertexNormalList;
 	Vec3f center(0, 0, 0);
 

@@ -127,7 +127,6 @@ void init(){
 	s->loadTexture("textures/earth_night_large.jpg", "night");
 	s->loadTexture("textures/earth_clouds_large.jpg", "clouds");
 	s->loadTexture("textures/earth_specular.jpg", "specMap");
-	s->smoothNormals();
 	s->setScale(4.0, 4.0, 4.0);
 	s->setDiffuseColor(1.0, 0.941, 0.898);
 	s->initBuffers(program);

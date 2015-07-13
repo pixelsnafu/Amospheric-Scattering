@@ -8,7 +8,10 @@ Object::Object(GLuint vao){
 	this->scale = new float[3]();
 	this->translate = new float[3]();
 	this->diffuse = new float[4]();
-	this->smooth = false;
+
+	// Object class calculates vertex normals by default.
+	// Disable this flag to enable flat shading. 
+	this->smooth = true;
 
 	for(int i = 0; i < 3; i++){
 		scale[i] = 1.0f;
@@ -77,6 +80,9 @@ void Object::disableCubemap(){
 	cubemap = false;
 }
 
+void Object::setSmoothShading(const bool& smooth){
+	this->smooth = smooth;
+}
 
 void Object::addTriangle(Vec3f v1, Vec3f v2, Vec3f v3){
 
@@ -177,7 +183,6 @@ void Object::addTriangle(Vec3f v1, Vec3f u1, Vec3f v2, Vec3f u2, Vec3f v3, Vec3f
 //function to calculate the vertex normals
 void Object::smoothNormals(){
 
-	smooth = true;
 	vector<Vec3f> vertexNormalList;
 	//find the mean of all the normals which are shared by the vertex,
 	//and normalize and add them to the vertex normal vector
@@ -199,27 +204,15 @@ void Object::smoothNormals(){
 	outVertexNormals = new float[faces.size() * 3 * 3];
 	Vec3f vn;
 	int index = 0;
-	for(int i = 0; i < faces.size(); i++){
-		vn = vertexNormalList.at(faces.at(i)->a);
-		outVertexNormals[index] = vn.x;
-		outVertexNormals[index + 1] = vn.y;
-		outVertexNormals[index + 2] = vn.z;
+	for(unsigned i = 0; i < faces.size(); i++){
+		for (unsigned j = 0; j < 3; j++){
+			vn = vertexNormalList.at((*faces.at(i))[j]);
+			outVertexNormals[index] = vn.x;
+			outVertexNormals[index + 1] = vn.y;
+			outVertexNormals[index + 2] = vn.z;
 
-		index += 3;
-
-		vn = vertexNormalList.at(faces.at(i)->b);
-		outVertexNormals[index] = vn.x;
-		outVertexNormals[index + 1] = vn.y;
-		outVertexNormals[index + 2] = vn.z;
-
-		index += 3;
-
-		vn = vertexNormalList.at(faces.at(i)->c);
-		outVertexNormals[index] = vn.x;
-		outVertexNormals[index + 1] = vn.y;
-		outVertexNormals[index + 2] = vn.z;
-
-		index += 3;
+			index += 3;
+		}
 	}
 }
 
@@ -237,6 +230,7 @@ void Object::loadTexture(const char* filename, const GLchar* sampler){
 }
 
 //function to pass all the array buffers into the openGL vertex buffers
+//P.S - This function has to be called in the end, once all the attributes for the objects have been set.
 void Object::initBuffers(const GLuint& program){
 
 	//get the attribute ids
@@ -266,6 +260,10 @@ void Object::initBuffers(const GLuint& program){
 
 			index += 3;
 		}
+	}
+
+	if (smooth){
+		smoothNormals();
 	}
 
 	glBindVertexArray(vao);
