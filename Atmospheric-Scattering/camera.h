@@ -118,7 +118,7 @@ public:
     void cameraUpdateRotX(int x){
         theta += x;
         float radius = sqrt(pow(eye.x - lookAt.x, 2) + pow(eye.z - lookAt.z, 2));
-        float angle = theta*2*PI/360;
+        float angle = theta*2*(float)PI/360;
 		lookAt.x = eye.x + radius*cos(angle);
         lookAt.z = eye.z + radius*sin(angle);
     }
@@ -131,7 +131,7 @@ public:
         if(phi <= -170)
             phi = -170;
         float radius = sqrt(pow(eye.y - lookAt.y, 2) + pow(eye.z - lookAt.z, 2));
-        float angle = phi*PI/180;
+        float angle = phi * (float)PI/180;
         lookAt.y = eye.y + radius*cos(angle);
 		
     }

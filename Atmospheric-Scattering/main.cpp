@@ -121,14 +121,14 @@ void init(){
 
 	
 	//initBuffers(vao_index, program);
-	s = new Sphere(vao_index, 1.0, 30, 30, 0.01, 0);
+	s = new Sphere(vao_index, 1.0f, 30, 30, 0.01f, 0.f);
 	s->generateMesh();
 	s->loadTexture("textures/earth_day_large.jpg", "mySampler");
 	s->loadTexture("textures/earth_night_large.jpg", "night");
 	s->loadTexture("textures/earth_clouds_large.jpg", "clouds");
 	s->loadTexture("textures/earth_specular.jpg", "specMap");
 	s->setScale(4.0, 4.0, 4.0);
-	s->setDiffuseColor(1.0, 0.941, 0.898);
+	s->setDiffuseColor(1.0f, 0.941f, 0.898f);
 	s->initBuffers(program);
 
 	vao_index++;

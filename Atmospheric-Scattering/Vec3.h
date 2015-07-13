@@ -175,6 +175,9 @@ struct face{
 		case 4:
 			return t;
 			break;
+		default:
+			std::cerr << "Face index value can't exceed 5. Aborting..." << std::endl;
+			exit(1);
 		}
 	}
 };
@@ -212,6 +215,7 @@ T vDistance(const Vec3<T>& v1, const Vec3<T>& v2){
 
 typedef Vec3<float> Vec3f;
 
+#pragma warning( disable : 4715)
 //comparator for the 3d vector
 struct Vec3Comp{
 	bool operator()(const Vec3f& v1, const Vec3f& v2){

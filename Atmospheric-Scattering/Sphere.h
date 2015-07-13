@@ -26,7 +26,7 @@ public:
 	//function to set the position of the sphere
 	void setPosition(float x, float y, float z);
 	//function to calculate vertex normals of the sphere (special case)
-	void smoothNormals();
+	virtual void calculateVertexNormals();
 	//function to animate the sphere
 	void animate();
 };

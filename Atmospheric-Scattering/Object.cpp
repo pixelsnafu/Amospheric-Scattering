@@ -107,13 +107,17 @@ void Object::addTriangle(Vec3f v1, Vec3f v2, Vec3f v3){
 	Vec3f n2 = v3 - v1;
 	Vec3f n = cross(n1, n2);
 
+	auto normalIter = find(normals.begin(), normals.end(), n);
 	//insert normal in the normals vector if not there already
-	if(find(normals.begin(), normals.end(), n) == normals.end())
+	if (normalIter == normals.end()){
 		normals.push_back(n);
+		// because we want the index of the last added normal duh
+		normalIter = normals.end() - 1;
+	}
 
 
 	//calculate the normal index
-	GLuint normalIndex = find(normals.begin(), normals.end(), n) - normals.begin();
+	GLuint normalIndex = normalIter - normals.begin();
 
 	//make a face with three vertex indices and a normal index
 	face* f = new face(index1, index2, index3, normalIndex);
@@ -161,7 +165,21 @@ void Object::addTriangle(Vec3f v1, Vec3f u1, Vec3f v2, Vec3f u2, Vec3f v3, Vec3f
 
 	Vec3f tangent;
 	tangent = f * (deltaV2 * e1 - deltaV1 * e2);
-	
+
+	auto tangentIter = find(tangents.begin(), tangents.end(), tangent);
+
+	// if tangent not in the vector, then add it and set iter to the
+	// vector's tail. 
+	if (tangentIter == tangents.end()){
+		tangents.push_back(tangent);
+		tangentIter = tangents.end() - 1;
+	}
+
+	GLuint tangentIndex = tangentIter - tangents.begin();
+
+	face* face = faces.back();
+	face->t = tangentIndex;
+
 	vector<Vec3f> triangleVertices;
 	triangleVertices.push_back(v1);
 	triangleVertices.push_back(v2);
@@ -181,19 +199,19 @@ void Object::addTriangle(Vec3f v1, Vec3f u1, Vec3f v2, Vec3f u2, Vec3f v3, Vec3f
 }
 
 //function to calculate the vertex normals
-void Object::smoothNormals(){
+void Object::calculateVertexNormals(){
 
 	vector<Vec3f> vertexNormalList;
 	//find the mean of all the normals which are shared by the vertex,
 	//and normalize and add them to the vertex normal vector
-	for(int i = 0; i < points.size(); i++){
+	for(unsigned i = 0; i < points.size(); i++){
 		vector<Vec3f> tempList = sharedNormals.at(points.at(i));
 		Vec3f vn;
-		for(int j = 0; j < tempList.size(); j++){
+		for(unsigned j = 0; j < tempList.size(); j++){
 			vn += tempList.at(j);
 		}
 
-		vn /= tempList.size();
+		vn /= (float)tempList.size();
 		vn.normalize();
 
 		vertexNormalList.push_back(vn);
@@ -233,6 +251,9 @@ void Object::loadTexture(const char* filename, const GLchar* sampler){
 //P.S - This function has to be called in the end, once all the attributes for the objects have been set.
 void Object::initBuffers(const GLuint& program){
 
+	cout << "Normals Size: " << normals.size() << endl;
+	cout << "Tangents Size: " << tangents.size() << endl;
+
 	//get the attribute ids
 	GLuint vertexAttributeID = glGetAttribLocation(program, "vPosition");
 	GLuint normalAttributeID = glGetAttribLocation(program, "vNormal");
@@ -240,10 +261,9 @@ void Object::initBuffers(const GLuint& program){
 
 	outVertices = new float[faces.size() * 3 * 3];
 	outNormals = new float[faces.size() * 3 * 3];
-	Vec3f v;
-	Vec3f n;
+	Vec3f v, n, t;
 	int index = 0;
-	for(int i = 0; i < faces.size(); i++){
+	for(unsigned i = 0; i < faces.size(); i++){
 		n = normals.at(faces.at(i)->n);
 
 		for (unsigned j = 0; j < 3; j++){
@@ -263,7 +283,7 @@ void Object::initBuffers(const GLuint& program){
 	}
 
 	if (smooth){
-		smoothNormals();
+		calculateVertexNormals();
 	}
 
 	glBindVertexArray(vao);
@@ -290,7 +310,7 @@ void Object::initBuffers(const GLuint& program){
 		outUV = new float[uv.size() * 2];
 		index = 0;
 
-		for(int i = 0; i < uv.size(); i++){
+		for(unsigned i = 0; i < uv.size(); i++){
 			outUV[index] = uv.at(i).x;
 			outUV[index + 1] = uv.at(i).y;
 			index += 2;

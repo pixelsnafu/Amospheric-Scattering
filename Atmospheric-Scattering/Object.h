@@ -58,10 +58,8 @@ protected:
 	float* outVertices;
 	float* outNormals;
 	float* outTangents;
-	float* outBiNormals;
 	float* outVertexNormals;
 	float* outVertexTangents;
-	float* outVertexBiNormals;
 	float* outUV;
 
 	//normal and light flags
@@ -84,7 +82,7 @@ public:
 	//a helper add triangle function
 	void addTriangle(Vec3f v1, Vec3f u1, Vec3f v2, Vec3f u2, Vec3f v3, Vec3f u3);
 	//function to calculate vertex normals
-	virtual void smoothNormals();
+	virtual void calculateVertexNormals();
 	//function to load texture file into opengl framework
 	void loadTexture(const char* filename, const GLchar* sampler);
 	//used by skybox to load multiple textures

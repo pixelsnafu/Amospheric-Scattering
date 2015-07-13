@@ -37,8 +37,8 @@ void Sphere::setPosition(float x, float y, float z){
 //sphere tessellation function (nothing new here)
 void Sphere::generateMesh(){
 	
-	float deltaPhi = PI/stacks;
-	float deltaTheta = (2*PI)/slices;
+	float deltaPhi = (float)PI/stacks;
+	float deltaTheta = (2 * (float)PI)/slices;
 
 	for(float phi = 0; phi < PI ; phi += deltaPhi){
 		for(float theta = 0; theta < 2*PI - 0.001; theta += deltaTheta){
@@ -47,29 +47,29 @@ void Sphere::generateMesh(){
 			float y1 = -cosf(phi) * radius;
 			float z1 = -sinf(phi) * cosf(theta) * radius;
 
-			float u1 = atan2(x1, z1) / (2 * PI) + 0.5;
-			float v1 = -asin(y1) / PI + 0.5;
+			float u1 = float( atan2(x1, z1) / (2 * PI) + 0.5 );
+			float v1 = float( -asin(y1) / (float)PI + 0.5 );
 
 			float x2 = -sinf(theta + deltaTheta) * sinf(phi) * radius;
 			float y2 = -cosf(phi) * radius;
 			float z2 = -sinf(phi) * cosf(theta + deltaTheta) * radius;
 
-			float u2 = atan2(x2, z2) / (2 * PI) + 0.5;
-			float v2 = -asin(y2) / (PI) + 0.5;
+			float u2 = float( atan2(x2, z2) / (2 * PI) + 0.5 );
+			float v2 = float( -asin(y2) / ((float)PI) + 0.5 );
 
 			float x3 = -sinf(theta + deltaTheta) * sinf(phi + deltaPhi) * radius;
 			float y3 = -cosf(phi + deltaPhi) * radius;
 			float z3 = -sinf(phi + deltaPhi) * cosf(theta + deltaTheta) * radius;
 
-			float u3 = atan2(x3, z3) / (2 * PI) + 0.5;
-			float v3 = -asin(y3) / PI + 0.5;
+			float u3 = float( atan2(x3, z3) / (2 * (float)PI) + 0.5 );
+			float v3 = float( -asin(y3) / (float)PI + 0.5 );
 
 			float x4 = -sinf(theta) * sinf(phi + deltaPhi) * radius;
 			float y4 = -cosf(phi + deltaPhi) * radius;
 			float z4 = -sinf(phi + deltaPhi) * cosf(theta) * radius;
 
-			float u4 = atan2(x4, z4) / (2 * PI) + 0.5;
-			float v4 = -asin(y4) / PI + 0.5;
+			float u4 = float( atan2(x4, z4) / (2 * (float)PI) + 0.5 );
+			float v4 = float( -asin(y4) / (float)PI + 0.5 );
 		
 
 			Vec3f p1(x1, y1, z1);
@@ -96,11 +96,11 @@ void Sphere::generateMesh(){
 }
 
 //function to calculate the smooth normals for a sphere
-void Sphere::smoothNormals(){
+void Sphere::calculateVertexNormals(){
 	vector<Vec3f> vertexNormalList;
 	Vec3f center(0, 0, 0);
 
-	for(int i = 0; i < points.size(); i++){
+	for(unsigned i = 0; i < points.size(); i++){
 		Vec3f vn = points.at(i) - center;
 		vn.normalize();
 		vertexNormalList.push_back(vn);
