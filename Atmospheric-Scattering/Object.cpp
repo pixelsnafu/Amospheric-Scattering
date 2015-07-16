@@ -234,6 +234,38 @@ void Object::calculateVertexNormals(){
 	}
 }
 
+void Object::calculateVertexTangents(){
+	vector<Vec3f> vertexTangentList;
+	//find the mean of all the tangents which are shared by the vertex,
+	//and normalize and add them to the vertex tangent vector
+	for (unsigned i = 0; i < points.size(); i++){
+		auto tempList = sharedTangents.at(points.at(i));
+		Vec3f vt;
+		for (unsigned j = 0; j < tempList.size(); j++){
+			vt += tempList.at(j);
+		}
+
+		vt /= tempList.size();
+		vt.normalize();
+
+		vertexTangentList.push_back(vt);
+	}
+
+	outVertexTangents = new float[faces.size() * 3 * 3];
+	Vec3f vt;
+	int index = 0;
+	for (unsigned i = 0; i < faces.size(); i++){
+		for (unsigned j = 0; j < 3; j++){
+			vt = vertexTangentList.at((*faces.at(i))[j]);
+			outVertexTangents[index] = vt.x;
+			outVertexTangents[index + 1] = vt.y;
+			outVertexTangents[index + 2] = vt.z;
+
+			index += 3;
+		}
+	}
+}
+
 //function to load a texture in the shader
 void Object::loadTexture(const char* filename, const GLchar* sampler){
 	int texID;
@@ -258,6 +290,7 @@ void Object::initBuffers(const GLuint& program){
 	GLuint vertexAttributeID = glGetAttribLocation(program, "vPosition");
 	GLuint normalAttributeID = glGetAttribLocation(program, "vNormal");
 	GLuint uvAttributeID = glGetAttribLocation(program, "vTexCoord");
+	GLuint tangentAttributeID = glGetAttribLocation(program, "vTangent");
 
 	outVertices = new float[faces.size() * 3 * 3];
 	outNormals = new float[faces.size() * 3 * 3];
@@ -265,6 +298,9 @@ void Object::initBuffers(const GLuint& program){
 	int index = 0;
 	for(unsigned i = 0; i < faces.size(); i++){
 		n = normals.at(faces.at(i)->n);
+		if (tangents.size() > 0){
+			t = tangents.at(faces.at(i)->t);
+		}
 
 		for (unsigned j = 0; j < 3; j++){
 			v = points.at((*faces.at(i))[j]);
@@ -276,6 +312,12 @@ void Object::initBuffers(const GLuint& program){
 				outNormals[index] = n.x;
 				outNormals[index + 1] = n.y;
 				outNormals[index + 2] = n.z;
+
+				if (t != Vec3f()){
+					outTangents[index] = t.x;
+					outTangents[index + 1] = t.y;
+					outTangents[index + 2] = t.z;
+				}
 			}
 
 			index += 3;
@@ -284,13 +326,16 @@ void Object::initBuffers(const GLuint& program){
 
 	if (smooth){
 		calculateVertexNormals();
+		if (tangents.size() > 0){
+			calculateVertexTangents();
+		}
 	}
 
 	glBindVertexArray(vao);
 
-	glGenBuffers(3, vbo);
+	glGenBuffers(4, vbo);
 
-	//pas the vertex buffers
+	//pass the vertex buffers
 	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
 	glBufferData(GL_ARRAY_BUFFER, faces.size() * 3 * 3 * sizeof(float), outVertices, GL_STATIC_DRAW);
 	glEnableVertexAttribArray(vertexAttributeID);
@@ -320,6 +365,16 @@ void Object::initBuffers(const GLuint& program){
 		glBufferData(GL_ARRAY_BUFFER, uv.size() * 2 * sizeof(float), outUV, GL_STATIC_DRAW);
 		glEnableVertexAttribArray(uvAttributeID);
 		glVertexAttribPointer(uvAttributeID, 2, GL_FLOAT, GL_FALSE, 0, 0);
+	}
+
+	if (texIDs.size() > 0 && tangents.size() > 0){
+		glBindBuffer(GL_ARRAY_BUFFER, vbo[3]);
+		if (smooth)
+			glBufferData(GL_ARRAY_BUFFER, faces.size() * 3 * 3 * sizeof(float), outVertexTangents, GL_STATIC_DRAW);
+		else
+			glBufferData(GL_ARRAY_BUFFER, faces.size() * 3 * 3 * sizeof(float), outTangents, GL_STATIC_DRAW);
+		glEnableVertexAttribArray(tangentAttributeID);
+		glVertexAttribPointer(tangentAttributeID, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	}
 
 }
