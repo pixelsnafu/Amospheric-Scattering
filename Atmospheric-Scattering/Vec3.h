@@ -5,6 +5,7 @@
 
 #include <iostream>
 #include <cassert>
+#include <glm\glm.hpp>
 
 #define PI 3.14159
 
@@ -19,20 +20,20 @@ public:
 	T x, y, z;
 
 	//constructors
-	Vec3():x(T(0)), y(T(0)), z(T(0)){}
-	Vec3(T xx):x(xx), y(xx), z(xx){}
+	Vec3() :x(T(0)), y(T(0)), z(T(0)){}
+	Vec3(T xx) :x(xx), y(xx), z(xx){}
 	Vec3(T xx, T yy, T zz) : x(xx), y(yy), z(zz) {}
 
 	//function to return the magnitude of the vector
-	T magnitude() const { 
-		return sqrt(x * x + y * y + z * z); 
+	T magnitude() const {
+		return sqrt(x * x + y * y + z * z);
 	}
 
 	//normalize a vector (perform calculation on the vector itself)
-	void normalize() { 
-		T mag = magnitude(); 
-		if (mag) 
-			*this *= 1 / mag; 
+	void normalize() {
+		T mag = magnitude();
+		if (mag)
+			*this *= 1 / mag;
 	}
 
 	//return a normalized version of a vector (copy)
@@ -44,8 +45,8 @@ public:
 
 
 	//calculate dot product of this vector with another vector
-	T dot(const Vec3<T> &v) const{ 
-		return x * v.x + y * v.y + z * v.z; 
+	T dot(const Vec3<T> &v) const{
+		return x * v.x + y * v.y + z * v.z;
 	}
 
 
@@ -58,8 +59,8 @@ public:
 	}
 
 	//add two vectors
-	Vec3 operator+ (const Vec3<T> &v) const{ 
-		return Vec3<T>(x + v.x, y + v.y, z + v.z); 
+	Vec3 operator+ (const Vec3<T> &v) const{
+		return Vec3<T>(x + v.x, y + v.y, z + v.z);
 	}
 
 	//add two vectors (reference)
@@ -69,14 +70,14 @@ public:
 	}
 
 	//scale a vector
-	Vec3 operator* (const T &val) const{ 
-		return Vec3<T>(x * val, y * val, z * val); 
+	Vec3 operator* (const T &val) const{
+		return Vec3<T>(x * val, y * val, z * val);
 	}
 
 	//divide a vector by a constant value
-	Vec3 operator/ (const T &val) const{ 
-		T invVal = T(1) / val; 
-		return Vec3<T>(x * invVal, y * invVal, z * invVal); 
+	Vec3 operator/ (const T &val) const{
+		T invVal = T(1) / val;
+		return Vec3<T>(x * invVal, y * invVal, z * invVal);
 	}
 
 	Vec3& operator/= (const T &val) {
@@ -85,23 +86,23 @@ public:
 	}
 
 	//divide a vector by another vector
-	Vec3 operator/ (const Vec3<T> &v) const{ 
-		return Vec3<T>(x / v.x, y / v.y, z / v.z); 
+	Vec3 operator/ (const Vec3<T> &v) const{
+		return Vec3<T>(x / v.x, y / v.y, z / v.z);
 	}
 
 	//multiple a vector with another vector
 	Vec3 operator* (const Vec3<T> &v) const{
-		return Vec3<T>(x * v.x, y * v.y, z * v.z); 
+		return Vec3<T>(x * v.x, y * v.y, z * v.z);
 	}
 
 	//calculate difference of two vectors
 	Vec3 operator- (const Vec3<T> &v) const{
-		return Vec3<T>(x - v.x, y - v.y, z - v.z); 
+		return Vec3<T>(x - v.x, y - v.y, z - v.z);
 	}
 
 	//negate a vector
 	Vec3 operator- () const{
-		return Vec3<T>(-x, -y, -z); 
+		return Vec3<T>(-x, -y, -z);
 	}
 
 	//scale a vector by reference
@@ -120,9 +121,34 @@ public:
 		return !(*this == v);
 	}
 
+	bool operator<(const Vec3<T>& v) const{
+		if (x < v.x){
+			return true;
+		}
+		else if (x > v.x){
+			return false;
+		}
+		else if (x == v.x){
+			if (y < v.y)
+				return true;
+			else if (y > v.y)
+				return false;
+			else if (y == v.y){
+				if (z < v.z)
+					return true;
+				else if (z > v.z)
+					return false;
+				else{
+					return z < v.z;
+				}
+			}
+		}
+	}
+
+
 	//divide a vector by a scalar
 	friend Vec3<T> operator/ (const T& val, const Vec3<T>& v){
-		return Vec3<T>(val/v.x, val/v.y, val/v.z);
+		return Vec3<T>(val / v.x, val / v.y, val / v.z);
 	}
 
 	//scale a vector
@@ -139,26 +165,26 @@ public:
 
 //helper structure to store faces (triangles)
 struct face{
-    GLuint a,b,c,n,t;
-    face(GLuint aa, GLuint bb, GLuint cc, GLuint nn) :
-	a(aa), b(bb), c(cc), n(nn){
+	GLuint a, b, c, n, t;
+	face(GLuint aa, GLuint bb, GLuint cc, GLuint nn) :
+		a(aa), b(bb), c(cc), n(nn){
 		t = -1;
-    }
+	}
 
 	face(GLuint aa, GLuint bb, GLuint cc, GLuint nn, GLuint tt) :
-	a(aa), b(bb), c(cc), n(nn), t(tt){
+		a(aa), b(bb), c(cc), n(nn), t(tt){
 	}
-	
-    face(){
-        a = 0;
-        b = 0;
-        c = 0;
-        n = 0;
+
+	face(){
+		a = 0;
+		b = 0;
+		c = 0;
+		n = 0;
 		t = 0;
 	}
 
 	const GLuint& operator[] (const GLuint& index){
-		assert( index < 5 );
+		assert(index < 5);
 		switch (index){
 		case 0:
 			return a;
@@ -219,19 +245,21 @@ typedef Vec3<float> Vec3f;
 //comparator for the 3d vector
 struct Vec3Comp{
 	bool operator()(const Vec3f& v1, const Vec3f& v2){
-		if(v1.x < v2.x){
+		if (v1.x < v2.x){
 			return true;
-		}else if(v1.x > v2.x){
+		}
+		else if (v1.x > v2.x){
 			return false;
-		}else if(v1.x == v2.x){
-			if(v1.y < v2.y)
+		}
+		else if (v1.x == v2.x){
+			if (v1.y < v2.y)
 				return true;
-			else if(v1.y > v2.y)
+			else if (v1.y > v2.y)
 				return false;
-			else if(v1.y == v2.y){
-				if(v1.z < v2.z)
+			else if (v1.y == v2.y){
+				if (v1.z < v2.z)
 					return true;
-				else if(v1.z > v2.z)
+				else if (v1.z > v2.z)
 					return false;
 				else{
 					return v1.z < v2.z;

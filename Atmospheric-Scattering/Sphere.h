@@ -29,6 +29,8 @@ public:
 	virtual void calculateVertexNormals();
 	//function to animate the sphere
 	void animate();
+
+	float getRadius();
 };
 
 #endif

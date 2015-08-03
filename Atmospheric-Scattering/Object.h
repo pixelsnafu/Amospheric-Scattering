@@ -46,7 +46,7 @@ protected:
 
 	//a map<vertex, vector<normals>> to store the normals which are shared by each vertex
 	map<Vec3f, vector<Vec3f>, Vec3Comp> sharedNormals;
-	map<Vec3f, vector<Vec3f>, Vec3Comp> sharedTangents;
+	map<Vec3f, Vec3f, Vec3Comp> sharedTangents;
 
 	GLuint vao;
 	GLuint vbo[10];

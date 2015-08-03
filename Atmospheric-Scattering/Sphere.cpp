@@ -134,3 +134,7 @@ void Sphere::animate(){
 	this->translate[2] = sunDistance * sin(theta);
 	this->angle[1] += rotSpeed;
 }
+
+float Sphere::getRadius(){
+	return radius;
+}

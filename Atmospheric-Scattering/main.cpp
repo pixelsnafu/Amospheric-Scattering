@@ -13,8 +13,8 @@
 
 using namespace std;
 
-#define VIEW_SIZE_WIDTH 1024
-#define VIEW_SIZE_HEIGHT 768
+int VIEW_SIZE_WIDTH = 1024;
+int VIEW_SIZE_HEIGHT = 768;
 
 #define FULLSCREEN_WIDTH GetSystemMetrics(SM_CXSCREEN)
 #define FULLSCREEN_HEIGHT GetSystemMetrics(SM_CYSCREEN)
@@ -27,18 +27,18 @@ int prevX = -1, prevY = -1;
 camera* cam;
 bool fullScreen = false;
 
-float l = -0.25;
-float r = 0.25;
-float t = 0.25;
-float b = -0.25;
-float n = 0.5;
-float f = 10000.5;
+float l = -0.005f;
+float r = 0.005f;
+float t = 0.005f;
+float b = -0.005f;
+float n = 0.01f;
+float f = 10000.5f;
 
 //Buffer/shader variables
 GLuint vao[40];
 GLuint vbo[2];
 GLuint vertexAttribute, texAttribute;
-GLuint program, skybox_program;
+GLuint program, skybox_program, normalmap_program, curr_program;
 GLuint vao_index = 0;
 
 //camera variables
@@ -48,9 +48,11 @@ glm::vec3 camera_lookat(0.0, 0.0, 0.0);
 
 glm::mat4 scale(glm::scale(glm::mat4(1.0f), glm::vec3(5.0f, 5.0f, 5.0f)));
 float rotation[3] = {0.0, 0.0, 0.0};
+float sphereScale = 4.0f;
 
 glm::vec4 lightColor(1.25, 1.25, 1.25, 1.0);
-glm::vec4 lightPosition(0.0, 2.0, 12.0, 1.0);
+glm::vec4 lightPosition(100.0, 0.0, 100.0, 1.0);
+glm::vec4 cloudLightPosition(50.0, 0.0, 50.0, 1.0);
 
 //quad variables
 // x,y vertex positions
@@ -73,7 +75,7 @@ float quad_texcoords[] = {
 	0.0, 0.0
 };
 
-Sphere* s;
+Sphere* s, *cs;
 Skybox* skybox;
 
 void initBuffers(GLuint& index, GLuint program){
@@ -98,9 +100,15 @@ void initBuffers(GLuint& index, GLuint program){
 }
 
 void init(){
-	program = setUpAShader("shaders/shader.vert", "shaders/shader.frag");
+	program = setUpAShader("shaders/normalmap_shader.vert", "shaders/shader.frag");
 	if(!program){
 		cerr<<"Error setting up Shaders!";
+		exit(1);
+	}
+
+	normalmap_program = setUpAShader("shaders/normalmap_shader.vert", "shaders/normalmap_shader.frag");
+	if (!normalmap_program){
+		cerr << "Error Setting Up Normal Map Shaders!" << endl;
 		exit(1);
 	}
 
@@ -118,21 +126,35 @@ void init(){
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	GLfloat aspect_ratio = (GLfloat) VIEW_SIZE_WIDTH / (GLfloat) VIEW_SIZE_HEIGHT;
 	cam = new camera(camera_position, camera_lookat, up_vector, l, r, t, b, n, f, aspect_ratio);
-
 	
+	
+	curr_program = normalmap_program;
+
 	//initBuffers(vao_index, program);
-	s = new Sphere(vao_index, 1.0f, 30, 30, 0.01f, 0.f);
+	s = new Sphere(vao_index, 1.0f, 50, 50, 0.005f, 0.f);
 	s->generateMesh();
-	s->loadTexture("textures/earth_day_large.jpg", "mySampler");
-	s->loadTexture("textures/earth_night_large.jpg", "night");
-	s->loadTexture("textures/earth_clouds_large.jpg", "clouds");
+	s->loadTexture("textures/earth_day_8k.jpg", "mySampler");
+	s->loadTexture("textures/earth_night_8k.jpg", "night");
 	s->loadTexture("textures/earth_specular.jpg", "specMap");
-	s->loadTexture("textures/earth_normalmap.jpg", "bumpMap");
-	s->setScale(4.0, 4.0, 4.0);
+	s->loadTexture("textures/earth_normalmap_8k.jpg", "bumpMap");
+	s->setScale(sphereScale, sphereScale, sphereScale);
 	s->setDiffuseColor(1.0f, 0.941f, 0.898f);
-	s->initBuffers(program);
+	s->initBuffers(curr_program);
 
 	vao_index++;
+	curr_program = program;
+
+	float cloudScale = sphereScale + 0.075;
+	cs = new Sphere(vao_index, 1.0f, 50, 50, 0.0065f, 0.f);
+	cs->generateMesh();
+	cs->loadTexture("textures/clouds_normalmap_8k.jpg", "cloudBumpMap");
+	cs->loadTexture("textures/earth_clouds_8k.jpg", "clouds");
+	cs->setScale(cloudScale, cloudScale, cloudScale);
+	cs->setDiffuseColor(1.0f, 0.941f, 0.898f);
+	cs->initBuffers(curr_program);
+
+	vao_index++;
+	curr_program = skybox_program;
 
 	vector<const GLchar*> faces;
 	faces.push_back("skybox/right.png");
@@ -149,20 +171,39 @@ void init(){
 	skybox->setDiffuseColor(0.0, 0.0, 0.5);
 	skybox->loadTextures("skybox");
 	skybox->enableCubemap();
-	skybox->initBuffers(skybox_program);
+	skybox->initBuffers(curr_program);
 }
 
 void render(){
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	
+	curr_program = normalmap_program;
+	glUseProgram(curr_program);
+	cam->setupCamera(curr_program);
 
-	cam->setupCamera(program);
-
-	glUniform4fv(glGetUniformLocation(program, "lightPosition"), 1, glm::value_ptr(lightPosition));
-	glUniform4fv(glGetUniformLocation(program, "lightColor"), 1, glm::value_ptr(lightColor));
+	glUniform4fv(glGetUniformLocation(curr_program, "lightPosition"), 1, glm::value_ptr(lightPosition));
+	glUniform4fv(glGetUniformLocation(curr_program, "lightColor"), 1, glm::value_ptr(lightColor));
 
 	
-	s->render(program);
+	s->render(curr_program);
 	s->animate();
+
+	curr_program = program;
+	glUseProgram(curr_program);
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+	glDisable(GL_DEPTH_TEST);
+
+	cam->setupCamera(curr_program); 
+	glUniform4fv(glGetUniformLocation(curr_program, "lightPosition"), 1, glm::value_ptr(lightPosition));
+	glUniform4fv(glGetUniformLocation(curr_program, "lightColor"), 1, glm::value_ptr(lightColor * glm::vec4(0.75, 0.75, 0.75, 1.0)));
+
+	cs->render(curr_program);
+	cs->animate();
+
+	glDisable(GL_BLEND);
+	glEnable(GL_DEPTH_TEST);
 
 	//rendering the skybox
 	glDepthFunc(GL_LEQUAL); // Change depth function so depth test passes when values are equal to depth buffer's content
@@ -180,6 +221,7 @@ void render(){
 }
 
 void keyboard(unsigned char key, int x, int y){
+
 	switch(key){
 	case 27:
 		glutLeaveMainLoop();
@@ -189,41 +231,56 @@ void keyboard(unsigned char key, int x, int y){
 	case 'D':
 	case 'd':
 		cam->moveCameraRight();
-		cam->updateCamera(program);
+		cam->updateCamera(curr_program);
+		if (glm::length(cam->getCamPosition()) <= s->getRadius() * 4.4f){
+			cam->setCameraPosition(s->getRadius() * 4.4f * glm::normalize(cam->getCamPosition()));
+		}
 		break;
 
 	case 'a':
 	case 'A':
 		cam->moveCameraLeft();
-		cam->updateCamera(program);
+		cam->updateCamera(curr_program);
+		if (glm::length(cam->getCamPosition()) <= s->getRadius() * 4.4f){
+			cam->setCameraPosition(s->getRadius() * 4.4f * glm::normalize(cam->getCamPosition()));
+		}
 		break;
 
 	case 'w':
 	case 'W':
 		cam->moveCameraForward();
-		cam->updateCamera(program);
+		cam->updateCamera(curr_program);
+		if (glm::length(cam->getCamPosition()) <= s->getRadius() * 4.4f){
+			cam->setCameraPosition(s->getRadius() * 4.4f * glm::normalize(cam->getCamPosition()));
+		}
 		break;
 
 	case 's':
 	case 'S':
 		cam->moveCameraBackward();
-		cam->updateCamera(program);
+		cam->updateCamera(curr_program);
+		if (glm::length(cam->getCamPosition()) <= s->getRadius() * 4.4f){
+			cam->setCameraPosition(s->getRadius() * 4.4f * glm::normalize(cam->getCamPosition()));
+		}
 		break;
 	case 'f':
 		if(fullScreen){
 			fullScreen = false;
 			cam->setAspectRatio(VIEW_ASPECT_RATIO);
-			cam->setupCamera(program);
+			cam->setupCamera(curr_program);
 			glutReshapeWindow(VIEW_SIZE_WIDTH, VIEW_SIZE_HEIGHT);
 		}else{
 			fullScreen = true;
 			cam->setAspectRatio(FULLSCREEN_ASPECT_RATIO);
-			cam->setupCamera(program);
+			cam->setupCamera(curr_program);
 			glutFullScreen();
 		}
 		break;
 	case 'p':
-		SOIL_save_screenshot("screenshots/screenshot.bmp", SOIL_SAVE_TYPE_BMP, 0, 0, 1024, 768);
+		if (fullScreen)
+			SOIL_save_screenshot("screenshots/screenshot.bmp", SOIL_SAVE_TYPE_BMP, 0, 0, 1360, FULLSCREEN_HEIGHT);
+		else
+			SOIL_save_screenshot("screenshots/screenshot.bmp", SOIL_SAVE_TYPE_BMP, 0, 0, VIEW_SIZE_WIDTH, VIEW_SIZE_HEIGHT);
 		break;
 	}
 
@@ -239,7 +296,7 @@ void mouseMove(int x, int y){
 
 	cam->cameraUpdateRotX(x-prevX);
 	cam->cameraUpdateRotY(y-prevY);
-	cam->setupCamera(program);
+	cam->setupCamera(curr_program);
 	prevX = x;
 	prevY = y;
 }

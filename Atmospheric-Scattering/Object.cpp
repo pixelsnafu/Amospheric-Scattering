@@ -184,16 +184,15 @@ void Object::addTriangle(Vec3f v1, Vec3f u1, Vec3f v2, Vec3f u2, Vec3f v3, Vec3f
 	triangleVertices.push_back(v1);
 	triangleVertices.push_back(v2);
 	triangleVertices.push_back(v3);
-
-	for(unsigned i = 0; i < triangleVertices.size(); i++){
-		Vec3f vertex = triangleVertices.at(i);
-		if(sharedTangents.find(vertex) == sharedTangents.end()){
-			vector<Vec3f> temp;
-			temp.push_back(tangent);
-			sharedTangents.insert(pair<Vec3f, vector<Vec3f>>(vertex, temp));
-		}else{
-			auto& tangentList = sharedTangents.at(vertex);
-			tangentList.push_back(tangent);
+	
+	for (unsigned i = 0; i < triangleVertices.size(); i++){
+		Vec3f v = triangleVertices.at(i);
+		if (sharedTangents.find(v) == sharedTangents.end()){
+			sharedTangents.insert(pair<Vec3f, Vec3f>(v, tangent));
+		}
+		else{
+			Vec3f& vt = sharedTangents.at(v);
+			vt += tangent;
 		}
 	}	
 }
@@ -211,7 +210,6 @@ void Object::calculateVertexNormals(){
 			vn += tempList.at(j);
 		}
 
-		vn /= (float)tempList.size();
 		vn.normalize();
 
 		vertexNormalList.push_back(vn);
@@ -238,16 +236,10 @@ void Object::calculateVertexTangents(){
 	vector<Vec3f> vertexTangentList;
 	//find the mean of all the tangents which are shared by the vertex,
 	//and normalize and add them to the vertex tangent vector
+
 	for (unsigned i = 0; i < points.size(); i++){
-		auto tempList = sharedTangents.at(points.at(i));
-		Vec3f vt;
-		for (unsigned j = 0; j < tempList.size(); j++){
-			vt += tempList.at(j);
-		}
-
-		vt /= tempList.size();
+		Vec3f vt = sharedTangents.at(points.at(i));
 		vt.normalize();
-
 		vertexTangentList.push_back(vt);
 	}
 
@@ -273,7 +265,7 @@ void Object::loadTexture(const char* filename, const GLchar* sampler){
 	if(texID == 0){
 		cerr<<"SOIL error: "<<SOIL_last_result();
 	}
-
+	cout << filename << " Tex ID: " << texID << endl;
 	texIDs.push_back(texID);
 	samplers.push_back(sampler);
 	//glBindTexture(GL_TEXTURE_2D, texID);
