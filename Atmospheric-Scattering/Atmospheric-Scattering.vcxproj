@@ -71,6 +71,7 @@
     <ClInclude Include="shaderProgram.h" />
     <ClInclude Include="SkyBox.h" />
     <ClInclude Include="Sphere.h" />
+    <ClInclude Include="TextureManager.h" />
     <ClInclude Include="Vec3.h" />
   </ItemGroup>
   <ItemGroup>
@@ -79,6 +80,7 @@
     <ClCompile Include="shaderProgram.cpp" />
     <ClCompile Include="SkyBox.cpp" />
     <ClCompile Include="Sphere.cpp" />
+    <ClCompile Include="TextureManager.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

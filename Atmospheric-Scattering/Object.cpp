@@ -72,6 +72,11 @@ void Object::disableLighting(){
 	lightSwitch = 0;
 }
 
+void Object::setTextureHandles(map <string, string> textureHandles)
+{
+	m_textureHandles = textureHandles;
+}
+
 void Object::enableCubemap(){
 	cubemap = true;
 }
@@ -258,19 +263,6 @@ void Object::calculateVertexTangents(){
 	}
 }
 
-//function to load a texture in the shader
-void Object::loadTexture(const char* filename, const GLchar* sampler){
-	int texID;
-	texID = SOIL_load_OGL_texture(filename, SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
-	if(texID == 0){
-		cerr<<"SOIL error: "<<SOIL_last_result();
-	}
-	cout << filename << " Tex ID: " << texID << endl;
-	texIDs.push_back(texID);
-	samplers.push_back(sampler);
-	//glBindTexture(GL_TEXTURE_2D, texID);
-}
-
 //function to pass all the array buffers into the openGL vertex buffers
 //P.S - This function has to be called in the end, once all the attributes for the objects have been set.
 void Object::initBuffers(const GLuint& program){
@@ -342,7 +334,7 @@ void Object::initBuffers(const GLuint& program){
 	glEnableVertexAttribArray(normalAttributeID);
 	glVertexAttribPointer(normalAttributeID, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
-	if(uv.size() > 0 && texIDs.size() > 0){
+	if(uv.size() > 0){
 
 		outUV = new float[uv.size() * 2];
 		index = 0;
@@ -359,7 +351,7 @@ void Object::initBuffers(const GLuint& program){
 		glVertexAttribPointer(uvAttributeID, 2, GL_FLOAT, GL_FALSE, 0, 0);
 	}
 
-	if (texIDs.size() > 0 && tangents.size() > 0){
+	if (tangents.size() > 0){
 		glBindBuffer(GL_ARRAY_BUFFER, vbo[3]);
 		if (smooth)
 			glBufferData(GL_ARRAY_BUFFER, faces.size() * 3 * 3 * sizeof(float), outVertexTangents, GL_STATIC_DRAW);
@@ -372,26 +364,25 @@ void Object::initBuffers(const GLuint& program){
 }
 
 //function to render stuff
-void Object::render(const GLuint& program){
+void Object::render(const GLuint& program, TextureManager& textureManager){
 
 	//Note to self : very very important!!! Otherwise you won't see anything! 
 	glUseProgram(program);
 
-
 	//bind the current object's texture
-	for(GLuint i = 0; i < texIDs.size(); i++){
-		glActiveTexture(GL_TEXTURE0 + i);
-		if (cubemap)
-			glBindTexture(GL_TEXTURE_CUBE_MAP, texIDs[i]);
-		else
-			glBindTexture(GL_TEXTURE_2D, texIDs[i]);
-	}
 
-	if(samplers.size()){
-		for(GLuint i = 0; i < samplers.size(); i++){
-			glUniform1i(glGetUniformLocation(program, samplers[i]), i);
+	for (auto iter = m_textureHandles.begin(); iter != m_textureHandles.end(); iter++)
+	{
+		if (cubemap)
+		{
+			textureManager.BindTextureCubeMap(iter->first, iter->second, program);
+		}
+		else
+		{
+			textureManager.BindTexture2D(iter->first, iter->second, program);
 		}
 	}
+
 	//set the uniforms
 	glUniform1i(glGetUniformLocation(program, "lightSwitch"), lightSwitch);
 	glUniform4fv(glGetUniformLocation(program, "diffuseColor"), 1, diffuse);
@@ -409,6 +400,10 @@ void Object::render(const GLuint& program){
 	//bind the vao and draw the triangles
 	glBindVertexArray(vao);
 	glDrawArrays(GL_TRIANGLES, 0, faces.size() * 3 * 3);
+
+	textureManager.unbindAllTextures();
+
+	glUseProgram(0);
 }
 
 

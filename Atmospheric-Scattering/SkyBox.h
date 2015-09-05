@@ -9,12 +9,11 @@
 using namespace std;
 
 class Skybox: public Object{
-	vector<const GLchar*> textureFaces;
+	vector<string> textureFaces;
 public:
 	Skybox(GLuint vao): Object(vao){}
-	Skybox(GLuint vao, vector<const GLchar*> textureFaces) : Object(vao) { this->textureFaces = textureFaces; }
+	Skybox(GLuint vao, vector<string> textureFaces) : Object(vao) { this->textureFaces = textureFaces; }
 	void generateMesh();
-	void loadTextures(const GLchar* sampler);
 };
 
 #endif

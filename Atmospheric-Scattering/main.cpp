@@ -4,22 +4,21 @@
 #include <iostream>
 #include <vector>
 #include <ctime>
+#include <string>
 
 #include "camera.h"
 #include "shaderProgram.h"
 #include "Vec3.h"
 #include "Sphere.h"
 #include "SkyBox.h"
+#include "TextureManager.h"
 
 using namespace std;
 
 int VIEW_SIZE_WIDTH = 1024;
 int VIEW_SIZE_HEIGHT = 768;
 
-#define FULLSCREEN_WIDTH GetSystemMetrics(SM_CXSCREEN)
-#define FULLSCREEN_HEIGHT GetSystemMetrics(SM_CYSCREEN)
-
-const float FULLSCREEN_ASPECT_RATIO = (float)FULLSCREEN_WIDTH/(float)FULLSCREEN_HEIGHT;
+float FULLSCREEN_WIDTH, FULLSCREEN_HEIGHT, FULLSCREEN_ASPECT_RATIO;
 const float VIEW_ASPECT_RATIO = (float)VIEW_SIZE_WIDTH/(float)VIEW_SIZE_HEIGHT;
 
 //camera variables
@@ -77,6 +76,7 @@ float quad_texcoords[] = {
 
 Sphere* s, *cs;
 Skybox* skybox;
+TextureManager& textureManager = TextureManager::GetInstance();
 
 void initBuffers(GLuint& index, GLuint program){
 	vertexAttribute = glGetAttribLocation(program, "vPosition");
@@ -100,7 +100,7 @@ void initBuffers(GLuint& index, GLuint program){
 }
 
 void init(){
-	program = setUpAShader("shaders/normalmap_shader.vert", "shaders/shader.frag");
+	program = setUpAShader("shaders/normalmap_shader.vert", "shaders/cloudmap_shader.frag");
 	if(!program){
 		cerr<<"Error setting up Shaders!";
 		exit(1);
@@ -121,42 +121,16 @@ void init(){
 	glGenVertexArrays(40, vao);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
+	glEnable(GL_MULTISAMPLE);
+	//glEnable(GL_POLYGON_SMOOTH);
+	glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glCullFace(GL_BACK);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	GLfloat aspect_ratio = (GLfloat) VIEW_SIZE_WIDTH / (GLfloat) VIEW_SIZE_HEIGHT;
 	cam = new camera(camera_position, camera_lookat, up_vector, l, r, t, b, n, f, aspect_ratio);
-	
-	
-	curr_program = normalmap_program;
 
-	//initBuffers(vao_index, program);
-	s = new Sphere(vao_index, 1.0f, 50, 50, 0.005f, 0.f);
-	s->generateMesh();
-	s->loadTexture("textures/earth_day_8k.jpg", "mySampler");
-	s->loadTexture("textures/earth_night_8k.jpg", "night");
-	s->loadTexture("textures/earth_specular.jpg", "specMap");
-	s->loadTexture("textures/earth_normalmap_8k.jpg", "bumpMap");
-	s->setScale(sphereScale, sphereScale, sphereScale);
-	s->setDiffuseColor(1.0f, 0.941f, 0.898f);
-	s->initBuffers(curr_program);
-
-	vao_index++;
-	curr_program = program;
-
-	float cloudScale = sphereScale + 0.075;
-	cs = new Sphere(vao_index, 1.0f, 50, 50, 0.0065f, 0.f);
-	cs->generateMesh();
-	cs->loadTexture("textures/clouds_normalmap_8k.jpg", "cloudBumpMap");
-	cs->loadTexture("textures/earth_clouds_8k.jpg", "clouds");
-	cs->setScale(cloudScale, cloudScale, cloudScale);
-	cs->setDiffuseColor(1.0f, 0.941f, 0.898f);
-	cs->initBuffers(curr_program);
-
-	vao_index++;
-	curr_program = skybox_program;
-
-	vector<const GLchar*> faces;
+	vector<string> faces;
 	faces.push_back("skybox/right.png");
 	faces.push_back("skybox/left.png");
 	faces.push_back("skybox/top.png");
@@ -164,12 +138,59 @@ void init(){
 	faces.push_back("skybox/front.png");
 	faces.push_back("skybox/back.png");
 
+	textureManager.LoadTextureCubeMap(faces, "skybox");
+	textureManager.LoadTexture2D("textures/earth_day_8k.jpg", "earthDay");
+	textureManager.LoadTexture2D("textures/earth_night_8k.jpg", "earthNight");
+	textureManager.LoadTexture2D("textures/earth_specular.jpg", "earthSpecularMap");
+	textureManager.LoadTexture2D("textures/earth_normalmap_8k.jpg", "earthNormalMap");
+	textureManager.LoadTexture2D("textures/earth_clouds_8k.jpg", "earthClouds");
+	textureManager.LoadTexture2D("textures/clouds_normalmap_8k.jpg", "earthCloudsNormalMap");
+
+	map<string, string> textureHandles;
+
+	curr_program = normalmap_program;
+	
+	textureHandles.clear();
+	textureHandles.insert(make_pair("earthDay", "day"));
+	textureHandles.insert(make_pair("earthNight", "night"));
+	textureHandles.insert(make_pair("earthSpecularMap", "specMap"));
+	textureHandles.insert(make_pair("earthNormalMap", "bumpMap"));
+
+	s = new Sphere(vao_index, 1.0f, 50, 50, 0.005f, 0.f);
+	s->generateMesh();
+	s->setTextureHandles(textureHandles);
+	s->setScale(sphereScale, sphereScale, sphereScale);
+	s->setDiffuseColor(1.0f, 0.941f, 0.898f);
+	s->initBuffers(curr_program);
+	
+	vao_index++;
+	curr_program = program;
+
+	textureHandles.clear();
+	textureHandles.insert(make_pair("earthClouds", "clouds"));
+	textureHandles.insert(make_pair("earthCloudsNormalMap", "cloudBumpMap"));
+
+
+	float cloudScale = sphereScale + 0.05;
+	cs = new Sphere(vao_index, 1.0f, 50, 50, 0.0065f, 0.f);
+	cs->generateMesh();
+	cs->setTextureHandles(textureHandles);
+	cs->setScale(cloudScale, cloudScale, cloudScale);
+	cs->setDiffuseColor(1.0f, 0.941f, 0.898f);
+	cs->initBuffers(curr_program);
+
+	
+	vao_index++;
+	curr_program = skybox_program;
+
+	textureHandles.clear();
+	textureHandles.insert(make_pair("skybox", "skybox"));
 
 	skybox = new Skybox(vao_index, faces);
 	skybox->generateMesh();
 	skybox->setScale(5.0, 5.0, 5.0);
 	skybox->setDiffuseColor(0.0, 0.0, 0.5);
-	skybox->loadTextures("skybox");
+	skybox->setTextureHandles(textureHandles);
 	skybox->enableCubemap();
 	skybox->initBuffers(curr_program);
 }
@@ -184,40 +205,54 @@ void render(){
 	glUniform4fv(glGetUniformLocation(curr_program, "lightPosition"), 1, glm::value_ptr(lightPosition));
 	glUniform4fv(glGetUniformLocation(curr_program, "lightColor"), 1, glm::value_ptr(lightColor));
 
-	
-	s->render(curr_program);
+	s->render(curr_program, textureManager);
 	s->animate();
 
 	curr_program = program;
-	glUseProgram(curr_program);
 
 	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-	glDisable(GL_DEPTH_TEST);
+	glBlendFunc(GL_ONE, GL_ONE);
+	glDepthMask(GL_FALSE);
 
-	cam->setupCamera(curr_program); 
+	cam->setupCamera(curr_program);
 	glUniform4fv(glGetUniformLocation(curr_program, "lightPosition"), 1, glm::value_ptr(lightPosition));
 	glUniform4fv(glGetUniformLocation(curr_program, "lightColor"), 1, glm::value_ptr(lightColor * glm::vec4(0.75, 0.75, 0.75, 1.0)));
 
-	cs->render(curr_program);
+	cs->render(curr_program, textureManager);
 	cs->animate();
 
 	glDisable(GL_BLEND);
-	glEnable(GL_DEPTH_TEST);
+	glDepthMask(GL_TRUE);
+
+	curr_program = skybox_program;
 
 	//rendering the skybox
 	glDepthFunc(GL_LEQUAL); // Change depth function so depth test passes when values are equal to depth buffer's content
-	glUseProgram(skybox_program);
+	glUseProgram(curr_program);
 	//cast out the translation from the view matrix of the camera, to make the skybox appear at infinity
 	glm::mat4 view = glm::mat4(glm::mat3(cam->getCameraViewMatrix()));
 	glm::mat4 projection = cam->getCameraProjectionMatrix();
 	glUniformMatrix4fv(glGetUniformLocation(skybox_program, "view"), 1, GL_FALSE, glm::value_ptr(view));
 	glUniformMatrix4fv(glGetUniformLocation(skybox_program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-	skybox->render(skybox_program);
+	skybox->render(skybox_program, textureManager);
 	glDepthFunc(GL_LESS); // Set the depth function to default after rendering the skybox
 
 	glutPostRedisplay();
 	glutSwapBuffers();
+}
+
+string getScreenShotFileName(){
+	time_t t = time(0);
+	struct tm* now = localtime(&t);
+	string underscore = string("_");
+	return string("screenshots/Earth") + underscore + to_string(now->tm_year + 1900) + underscore +
+		(now->tm_mon < 10 ? (string("0") + to_string(now->tm_mon)) : to_string(now->tm_mon)) + 
+		underscore + (now->tm_mday < 10 ? (string("0") + to_string(now->tm_mday)) : to_string(now->tm_mday)) + 
+		underscore + (now->tm_hour < 10 ? (string("0") + to_string(now->tm_hour)) : to_string(now->tm_hour)) +
+		underscore + (now->tm_min < 10 ? (string("0") + to_string(now->tm_min)) : to_string(now->tm_min)) +
+		underscore + (now->tm_sec < 10 ? (string("0") + to_string(now->tm_sec)) : to_string(now->tm_sec)) +
+		string(".bmp");
+
 }
 
 void keyboard(unsigned char key, int x, int y){
@@ -264,6 +299,7 @@ void keyboard(unsigned char key, int x, int y){
 		}
 		break;
 	case 'f':
+	case 'F':
 		if(fullScreen){
 			fullScreen = false;
 			cam->setAspectRatio(VIEW_ASPECT_RATIO);
@@ -271,16 +307,33 @@ void keyboard(unsigned char key, int x, int y){
 			glutReshapeWindow(VIEW_SIZE_WIDTH, VIEW_SIZE_HEIGHT);
 		}else{
 			fullScreen = true;
+			MONITORINFO target;
+			target.cbSize = sizeof(MONITORINFO);
+			HWND windowHandle = FindWindow(NULL, "Atmostpheric Scattering");
+			HMONITOR hMon = MonitorFromWindow(windowHandle, MONITOR_DEFAULTTONEAREST);
+			GetMonitorInfo(hMon, &target);
+			FULLSCREEN_WIDTH = target.rcMonitor.right - target.rcMonitor.left;
+			FULLSCREEN_HEIGHT = target.rcMonitor.bottom - target.rcMonitor.top;
+			FULLSCREEN_ASPECT_RATIO = FULLSCREEN_WIDTH / FULLSCREEN_HEIGHT;
 			cam->setAspectRatio(FULLSCREEN_ASPECT_RATIO);
 			cam->setupCamera(curr_program);
 			glutFullScreen();
 		}
 		break;
 	case 'p':
-		if (fullScreen)
-			SOIL_save_screenshot("screenshots/screenshot.bmp", SOIL_SAVE_TYPE_BMP, 0, 0, 1360, FULLSCREEN_HEIGHT);
+	case 'P':
+		if (fullScreen){
+			if (FULLSCREEN_WIDTH == 1366)
+			{
+				SOIL_save_screenshot(getScreenShotFileName().c_str(), SOIL_SAVE_TYPE_BMP, 0, 0, 1360, FULLSCREEN_HEIGHT);
+			}
+			else
+			{
+				SOIL_save_screenshot(getScreenShotFileName().c_str(), SOIL_SAVE_TYPE_BMP, 0, 0, FULLSCREEN_WIDTH, FULLSCREEN_HEIGHT);
+			}
+		}
 		else
-			SOIL_save_screenshot("screenshots/screenshot.bmp", SOIL_SAVE_TYPE_BMP, 0, 0, VIEW_SIZE_WIDTH, VIEW_SIZE_HEIGHT);
+			SOIL_save_screenshot(getScreenShotFileName().c_str(), SOIL_SAVE_TYPE_BMP, 0, 0, VIEW_SIZE_WIDTH, VIEW_SIZE_HEIGHT);
 		break;
 	}
 
@@ -304,7 +357,8 @@ void mouseMove(int x, int y){
 int main(int argc, char** argv){
 
 	glutInit(&argc, argv);
-	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
+	glutSetOption(GLUT_MULTISAMPLE, 8);
+	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_MULTISAMPLE);
 	glutInitWindowSize(VIEW_SIZE_WIDTH, VIEW_SIZE_HEIGHT);
 	glutCreateWindow("Atmostpheric Scattering");
 	glutWarpPointer(VIEW_SIZE_WIDTH/2, VIEW_SIZE_HEIGHT/2);

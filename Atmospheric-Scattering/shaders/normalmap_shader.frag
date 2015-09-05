@@ -1,12 +1,10 @@
 #version 400 core
 
-uniform vec4 lightColor;
-uniform vec4 diffuseColor;
-uniform sampler2D mySampler;
-uniform sampler2D night;
-uniform sampler2D clouds;
-uniform sampler2D specMap;
+uniform sampler2D day;
 uniform sampler2D bumpMap;
+uniform sampler2D night;
+uniform sampler2D specMap;
+
 
 in vec3 vPos;
 
@@ -34,10 +32,11 @@ void main(){
     float dotProd = max(dot(R, Emissive), 0.0);
     vec4 specColor = spec * pow(dotProd,6.0) * 0.5;
 	float diffuse = max(dot(N, L), 0.0);
+	float inv_diffuse = max(-dot(N, L), 0.0);
 
-	vec2 cloud_color			=	texture2D( clouds, texCoord).rg;
-	vec3 day_color				=	(texture2D( mySampler, texCoord ).rgb * diffuse + specColor.rgb * specMapColor.g);// * (1 - cloud_color.r) + cloud_color.r * diffuse;
-	vec3 night_color			=	texture2D( night, texCoord ).rgb * 0.5;// * (1 - cloud_color.r) * 0.5;
+	//vec2 cloud_color			=	texture2D( clouds, texCoord).rg;
+	vec3 day_color				=	(texture2D( day, texCoord ).rgb * diffuse + specColor.rgb * specMapColor.g);// * (1 - cloud_color.r) + cloud_color.r * diffuse;
+	vec3 night_color			=	texture2D( night, texCoord ).rgb * 0.5 * inv_diffuse;// * (1 - cloud_color.r) * 0.5;
 	
 	vec3 color = day_color;
 	if(dot(N, L) < 0.1)

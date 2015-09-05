@@ -21,6 +21,7 @@
 
 #include "Vec3.h"
 #include "camera.h"
+#include "TextureManager.h"
 
 /**
 General Object abstract class to calculate vertex, normal and texture coordinates,
@@ -51,8 +52,7 @@ protected:
 	GLuint vao;
 	GLuint vbo[10];
 	//GLuint texID;
-	vector<int> texIDs;
-	vector<const GLchar*> samplers;
+	map<string, string> m_textureHandles;
 
 	//array buffers for the final buffer outputs
 	float* outVertices;
@@ -69,47 +69,37 @@ protected:
 
 public:
 
-	//constructor
 	Object(GLuint vao);
-	//destructor
 	virtual ~Object();
-	//function to init the buffers for the 3d object
+
 	void initBuffers(const GLuint& program);
-	//render the 3d object
-	void render(const GLuint& program);
-	//add a triangle to the collection of vertices, calculate its normals and texture coordinates if need be
+
+	void render(const GLuint& program, TextureManager& textureManager);
+
 	void addTriangle(Vec3f v1, Vec3f v2, Vec3f v3);
-	//a helper add triangle function
 	void addTriangle(Vec3f v1, Vec3f u1, Vec3f v2, Vec3f u2, Vec3f v3, Vec3f u3);
-	//function to calculate vertex normals
+
 	virtual void calculateVertexNormals();
-	//function to calculate vertex tangents
 	virtual void calculateVertexTangents();
-	//function to load texture file into opengl framework
-	void loadTexture(const char* filename, const GLchar* sampler);
-	//used by skybox to load multiple textures
-	virtual void loadTextures(const GLchar* sampler){}
-	//set rotation of the object
+
 	void setRotation(float x, float y, float z);
-	//set the size of the current object
 	void setScale(float x, float y, float z);
-	//set the position of the object
 	virtual void setPosition(float x, float y, float z);
-	//return the position of the object
+
 	Vec3f getPosition();
-	//set the diffuse color of the object
+
 	void setDiffuseColor(float x, float y, float z);
-	//functions to enable/disable lighting on the object
+	void setTextureHandles(map<string, string>);
+
 	void enableLighting();
 	void disableLighting();
-	//functions to enable/disable cubemap texture (in case of a skybox object)
+	
 	void enableCubemap();
 	void disableCubemap();
 
 	void setSmoothShading(const bool& smooth);
-	//function to animate the object
 	virtual void animate(){}
-	//function to generate the mesh coordinates (uses addTriangle function in the base class)
+	
 	virtual void generateMesh() = 0;
 };
 
