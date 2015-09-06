@@ -171,7 +171,7 @@ void init(){
 	textureHandles.insert(make_pair("earthCloudsNormalMap", "cloudBumpMap"));
 
 
-	float cloudScale = sphereScale + 0.008;
+	float cloudScale = sphereScale + 0.01;
 	cs = new Sphere(vao_index, 1.0f, 50, 50, 0.0065f, 0.f);
 	cs->generateMesh();
 	cs->setTextureHandles(textureHandles);
@@ -223,6 +223,7 @@ void render(){
 
 	glDisable(GL_BLEND);
 	glDepthMask(GL_TRUE);
+	
 
 	curr_program = skybox_program;
 

@@ -36,7 +36,7 @@ void main(){
 
 	//vec2 cloud_color			=	texture2D( clouds, texCoord).rg;
 	vec3 day_color				=	(texture2D( day, texCoord ).rgb * diffuse + specColor.rgb * specMapColor.g);// * (1 - cloud_color.r) + cloud_color.r * diffuse;
-	vec3 night_color			=	texture2D( night, texCoord ).rgb * 0.5 * inv_diffuse;// * (1 - cloud_color.r) * 0.5;
+	vec3 night_color			=	texture2D( night, texCoord ).rgb * 0.5;// * (1 - cloud_color.r) * 0.5;
 	
 	vec3 color = day_color;
 	if(dot(N, L) < 0.1)
