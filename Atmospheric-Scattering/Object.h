@@ -87,6 +87,7 @@ public:
 	virtual void setPosition(float x, float y, float z);
 
 	Vec3f getPosition();
+	Vec3f getSize();
 
 	void setDiffuseColor(float x, float y, float z);
 	void setTextureHandles(map<string, string>);

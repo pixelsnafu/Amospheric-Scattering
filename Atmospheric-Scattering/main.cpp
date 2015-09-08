@@ -1,6 +1,8 @@
 #include <gl/glew.h>
 #include <gl/freeglut.h>
 #include <gl/GL.h>
+#include <glm\glm.hpp>
+#include <glm\gtc\type_ptr.hpp>
 #include <iostream>
 #include <vector>
 #include <ctime>
@@ -37,17 +39,17 @@ float f = 10000.5f;
 GLuint vao[40];
 GLuint vbo[2];
 GLuint vertexAttribute, texAttribute;
-GLuint program, skybox_program, normalmap_program, curr_program;
+GLuint program, skybox_program, normalmap_program, atmosphere_program, curr_program;
 GLuint vao_index = 0;
 
 //camera variables
 glm::vec3 up_vector(0, 1, 0);
-glm::vec3 camera_position(0.0, 0.0, 12.0);
+glm::vec3 camera_position(0.0, 0.0, 25.0);
 glm::vec3 camera_lookat(0.0, 0.0, 0.0);
 
 glm::mat4 scale(glm::scale(glm::mat4(1.0f), glm::vec3(5.0f, 5.0f, 5.0f)));
 float rotation[3] = {0.0, 0.0, 0.0};
-float sphereScale = 4.0f;
+float sphereScale = 10.0f;
 
 glm::vec4 lightColor(1.25, 1.25, 1.25, 1.0);
 glm::vec4 lightPosition(100.0, 0.0, 100.0, 1.0);
@@ -74,7 +76,7 @@ float quad_texcoords[] = {
 	0.0, 0.0
 };
 
-Sphere* s, *cs;
+Sphere *s, *cs, *as;
 Skybox* skybox;
 TextureManager& textureManager = TextureManager::GetInstance();
 
@@ -101,19 +103,29 @@ void initBuffers(GLuint& index, GLuint program){
 
 void init(){
 	program = setUpAShader("shaders/normalmap_shader.vert", "shaders/cloudmap_shader.frag");
-	if(!program){
+	if(!program)
+	{
 		cerr<<"Error setting up Shaders!";
 		exit(1);
 	}
 
 	normalmap_program = setUpAShader("shaders/normalmap_shader.vert", "shaders/normalmap_shader.frag");
-	if (!normalmap_program){
+	if (!normalmap_program)
+	{
 		cerr << "Error Setting Up Normal Map Shaders!" << endl;
 		exit(1);
 	}
 
+	atmosphere_program = setUpAShader("shaders/atmosphere_shader.vert", "shaders/atmosphere_shader.frag");
+	if (!atmosphere_program)
+	{
+		cerr << "Error Setting Up Atmosphere Shaders!" << endl;
+		exit(1);
+	}
+
 	skybox_program = setUpAShader("shaders/skybox.vert", "shaders/skybox.frag");
-	if(!program){
+	if(!program)
+	{
 		cerr<<"Error setting up Shaders!";
 		exit(1);
 	}
@@ -131,12 +143,13 @@ void init(){
 	cam = new camera(camera_position, camera_lookat, up_vector, l, r, t, b, n, f, aspect_ratio);
 
 	vector<string> faces;
-	faces.push_back("skybox/right.png");
-	faces.push_back("skybox/left.png");
-	faces.push_back("skybox/top.png");
-	faces.push_back("skybox/bottom.png");
-	faces.push_back("skybox/front.png");
-	faces.push_back("skybox/back.png");
+	string spaceboxDirectoryName("dark-space-skybox/");
+	faces.push_back(spaceboxDirectoryName + "right.png");
+	faces.push_back(spaceboxDirectoryName + "left.png");
+	faces.push_back(spaceboxDirectoryName + "top.png");
+	faces.push_back(spaceboxDirectoryName + "bottom.png");
+	faces.push_back(spaceboxDirectoryName + "front.png");
+	faces.push_back(spaceboxDirectoryName + "back.png");
 
 	textureManager.LoadTextureCubeMap(faces, "skybox");
 	textureManager.LoadTexture2D("textures/earth_day_8k.jpg", "earthDay");
@@ -171,7 +184,7 @@ void init(){
 	textureHandles.insert(make_pair("earthCloudsNormalMap", "cloudBumpMap"));
 
 
-	float cloudScale = sphereScale + 0.01;
+	float cloudScale = sphereScale + 0.1;
 	cs = new Sphere(vao_index, 1.0f, 50, 50, 0.0065f, 0.f);
 	cs->generateMesh();
 	cs->setTextureHandles(textureHandles);
@@ -179,7 +192,15 @@ void init(){
 	cs->setDiffuseColor(1.0f, 0.941f, 0.898f);
 	cs->initBuffers(curr_program);
 
-	
+	vao_index++;
+	curr_program = atmosphere_program;
+
+	as = new Sphere(vao_index, 1.0f, 50, 50, 0.0, 0.0);
+	GLfloat atmosphereScale = sphereScale + 0.15f;
+	as->setScale(atmosphereScale, atmosphereScale, atmosphereScale);
+	as->generateMesh();
+	as->initBuffers(curr_program);
+
 	vao_index++;
 	curr_program = skybox_program;
 
@@ -224,6 +245,46 @@ void render(){
 	glDisable(GL_BLEND);
 	glDepthMask(GL_TRUE);
 	
+	glCullFace(GL_FRONT);
+	curr_program = atmosphere_program;
+	glUseProgram(curr_program);
+	cam->setupCamera(curr_program);
+
+	GLfloat innerRadius = s->getRadius() * s->getSize().x;
+	GLfloat outerRadius = as->getRadius() * as->getSize().x;
+	GLfloat scale = 1.0f / (outerRadius - innerRadius);
+	GLfloat scaleDepth = as->getSize().x - s->getSize().x;
+	GLfloat scaleOverScaleDepth = scale / scaleDepth;
+	GLfloat Kr = 0.0030f;
+	GLfloat Km = 0.0015f;
+	GLfloat ESun = 16.0f;
+	GLfloat g = -0.75f;
+	GLfloat camHeight = glm::length(cam->getCamPosition());
+
+	glUniform3f(glGetUniformLocation(curr_program, "v3LightPos"), 0.f, 0.f, 1.f);
+	glUniform3f(glGetUniformLocation(curr_program, "v3InvWavelength"), 1.0f / powf(0.650f, 4.0f), 1.0f / powf(0.570f, 4.0f), 1.0f / powf(0.475f, 4.0f));
+	glUniform1f(glGetUniformLocation(curr_program, "fInnerRadius"), innerRadius);
+	glUniform1f(glGetUniformLocation(curr_program, "fInnerRadius2"), innerRadius * innerRadius);
+	glUniform1f(glGetUniformLocation(curr_program, "fOuterRadius"), outerRadius);
+	glUniform1f(glGetUniformLocation(curr_program, "fOuterRadius2"), outerRadius * outerRadius);
+	glUniform1f(glGetUniformLocation(curr_program, "fKrESun"), Kr * ESun);
+	glUniform1f(glGetUniformLocation(curr_program, "fKmESun"), Km * ESun);
+	glUniform1f(glGetUniformLocation(curr_program, "fKr4PI"), Kr * 4.0f * (float)PI);
+	glUniform1f(glGetUniformLocation(curr_program, "fKm4PI"), Km * 4.0f * (float)PI);
+	glUniform1f(glGetUniformLocation(curr_program, "fScale"), scale);
+	glUniform1f(glGetUniformLocation(curr_program, "fScaleDepth"), scaleDepth);
+	glUniform1f(glGetUniformLocation(curr_program, "fScaleOverScaleDepth"), scaleOverScaleDepth);
+	glUniform1f(glGetUniformLocation(curr_program, "g"), g);
+	glUniform1f(glGetUniformLocation(curr_program, "g2"), g * g);
+	glUniform1i(glGetUniformLocation(curr_program, "Samples"), 10);
+
+	glUniform3fv(glGetUniformLocation(curr_program, "v3CameraPos"), 1, glm::value_ptr(cam->getCamPosition()));
+	glUniform1f(glGetUniformLocation(curr_program, "fCameraHeight"), camHeight);
+	glUniform1f(glGetUniformLocation(curr_program, "fCameraHeight2"), camHeight * camHeight);
+
+	as->render(curr_program, textureManager);
+ 
+	glCullFace(GL_BACK);
 
 	curr_program = skybox_program;
 
@@ -258,6 +319,8 @@ string getScreenShotFileName(){
 
 void keyboard(unsigned char key, int x, int y){
 
+	const float cameraIntersectionThreshold = 1.05f;
+
 	switch(key){
 	case 27:
 		glutLeaveMainLoop();
@@ -268,8 +331,8 @@ void keyboard(unsigned char key, int x, int y){
 	case 'd':
 		cam->moveCameraRight();
 		cam->updateCamera(curr_program);
-		if (glm::length(cam->getCamPosition()) <= s->getRadius() * 4.4f){
-			cam->setCameraPosition(s->getRadius() * 4.4f * glm::normalize(cam->getCamPosition()));
+		if (glm::length(cam->getCamPosition()) <= s->getRadius() * s->getSize().x * cameraIntersectionThreshold){
+			cam->setCameraPosition(s->getRadius() * s->getSize().x * cameraIntersectionThreshold * glm::normalize(cam->getCamPosition()));
 		}
 		break;
 
@@ -277,8 +340,8 @@ void keyboard(unsigned char key, int x, int y){
 	case 'A':
 		cam->moveCameraLeft();
 		cam->updateCamera(curr_program);
-		if (glm::length(cam->getCamPosition()) <= s->getRadius() * 4.4f){
-			cam->setCameraPosition(s->getRadius() * 4.4f * glm::normalize(cam->getCamPosition()));
+		if (glm::length(cam->getCamPosition()) <= s->getRadius() * s->getSize().x * cameraIntersectionThreshold){
+			cam->setCameraPosition(s->getRadius() * s->getSize().x * cameraIntersectionThreshold * glm::normalize(cam->getCamPosition()));
 		}
 		break;
 
@@ -286,8 +349,8 @@ void keyboard(unsigned char key, int x, int y){
 	case 'W':
 		cam->moveCameraForward();
 		cam->updateCamera(curr_program);
-		if (glm::length(cam->getCamPosition()) <= s->getRadius() * 4.4f){
-			cam->setCameraPosition(s->getRadius() * 4.4f * glm::normalize(cam->getCamPosition()));
+		if (glm::length(cam->getCamPosition()) <= s->getRadius() * s->getSize().x * cameraIntersectionThreshold){
+			cam->setCameraPosition(s->getRadius() * s->getSize().x * cameraIntersectionThreshold * glm::normalize(cam->getCamPosition()));
 		}
 		break;
 
@@ -295,8 +358,8 @@ void keyboard(unsigned char key, int x, int y){
 	case 'S':
 		cam->moveCameraBackward();
 		cam->updateCamera(curr_program);
-		if (glm::length(cam->getCamPosition()) <= s->getRadius() * 4.4f){
-			cam->setCameraPosition(s->getRadius() * 4.4f * glm::normalize(cam->getCamPosition()));
+		if (glm::length(cam->getCamPosition()) <= s->getRadius() * s->getSize().x * cameraIntersectionThreshold){
+			cam->setCameraPosition(s->getRadius() * s->getSize().x * cameraIntersectionThreshold * glm::normalize(cam->getCamPosition()));
 		}
 		break;
 	case 'f':

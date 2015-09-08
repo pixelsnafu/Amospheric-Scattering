@@ -36,7 +36,7 @@ void main(){
 		color = mix(night_color, day_color, (diffuse + 0.1) * 5.0);
 
 	
-	frag_color = vec4(color, 1.0);
+	frag_color = vec4(color, cloud_color.a);
 	
 	//frag_color = vec4(day_color, 1.0);
 }

@@ -49,6 +49,7 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>freeglut.lib;glew32.lib;SOIL.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <SubSystem>Console</SubSystem>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -81,6 +82,17 @@
     <ClCompile Include="SkyBox.cpp" />
     <ClCompile Include="Sphere.cpp" />
     <ClCompile Include="TextureManager.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\atmosphere_shader.frag" />
+    <None Include="shaders\atmosphere_shader.vert" />
+    <None Include="shaders\cloudmap_shader.frag" />
+    <None Include="shaders\normalmap_shader.frag" />
+    <None Include="shaders\normalmap_shader.vert" />
+    <None Include="shaders\shader.frag" />
+    <None Include="shaders\shader.vert" />
+    <None Include="shaders\skybox.frag" />
+    <None Include="shaders\skybox.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

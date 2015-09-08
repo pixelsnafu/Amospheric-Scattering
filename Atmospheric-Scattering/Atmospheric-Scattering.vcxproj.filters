@@ -53,5 +53,19 @@
     <ClCompile Include="SkyBox.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="TextureManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\atmosphere_shader.vert" />
+    <None Include="shaders\cloudmap_shader.frag" />
+    <None Include="shaders\normalmap_shader.frag" />
+    <None Include="shaders\normalmap_shader.vert" />
+    <None Include="shaders\shader.frag" />
+    <None Include="shaders\shader.vert" />
+    <None Include="shaders\skybox.frag" />
+    <None Include="shaders\skybox.vert" />
+    <None Include="shaders\atmosphere_shader.frag" />
   </ItemGroup>
 </Project>

@@ -51,6 +51,11 @@ Vec3f Object::getPosition(){
 	return Vec3f(translate[0], translate[1], translate[2]);
 }
 
+Vec3f Object::getSize()
+{
+	return Vec3f(scale[0], scale[1], scale[2]);
+}
+
 void Object::setRotation(float x, float y, float z){
 	this->angle[0] = x;
 	this->angle[1] = y;

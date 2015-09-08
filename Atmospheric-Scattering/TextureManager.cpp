@@ -39,12 +39,17 @@ void TextureManager::LoadTexture2D(string filename, string textureAlias)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, imgData);
+	if (GLEW_EXT_texture_filter_anisotropic)
+	{
+		GLfloat maxAnisotropySamples;
+		glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maxAnisotropySamples);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, maxAnisotropySamples);
+
+	}
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, imgData);
 
 	glGenerateMipmap(GL_TEXTURE_2D);
-	GLfloat maxAnisotropySamples;
-	glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maxAnisotropySamples);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, maxAnisotropySamples);
 
 	SOIL_free_image_data(imgData);
 
@@ -58,7 +63,7 @@ void TextureManager::LoadTextureCubeMap(vector<string> textureFaces, string text
 {
 	int width, height;
 	GLuint textureID;
-	unsigned char* imgData;
+	unsigned char* imgData = NULL;
 
 	glEnable(GL_TEXTURE_CUBE_MAP);
 	glGenTextures(1, &textureID);
@@ -67,8 +72,16 @@ void TextureManager::LoadTextureCubeMap(vector<string> textureFaces, string text
 	for (GLuint i = 0; i < textureFaces.size(); i++)
 	{
 		imgData = SOIL_load_image(textureFaces[i].c_str(), &width, &height, 0, SOIL_LOAD_RGB);
+		cout << width << " " << height << endl;
+		if (imgData == NULL)
+		{
+			cout << "Error loading Image!" << endl;
+			exit(1);
+		}
+
 		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, imgData);
 		SOIL_free_image_data(imgData);
+		imgData = NULL;
 	}
 
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
