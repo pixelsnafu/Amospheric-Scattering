@@ -21,7 +21,7 @@ int VIEW_SIZE_WIDTH = 1024;
 int VIEW_SIZE_HEIGHT = 768;
 
 float FULLSCREEN_WIDTH, FULLSCREEN_HEIGHT, FULLSCREEN_ASPECT_RATIO;
-const float VIEW_ASPECT_RATIO = (float)VIEW_SIZE_WIDTH/(float)VIEW_SIZE_HEIGHT;
+float VIEW_ASPECT_RATIO = (float)VIEW_SIZE_WIDTH/(float)VIEW_SIZE_HEIGHT;
 
 //camera variables
 int prevX = -1, prevY = -1;
@@ -261,7 +261,10 @@ void render(){
 	GLfloat g = -0.75f;
 	GLfloat camHeight = glm::length(cam->getCamPosition());
 
-	glUniform3f(glGetUniformLocation(curr_program, "v3LightPos"), 0.f, 0.f, 1.f);
+	glm::vec3 lightPos = glm::normalize(glm::vec3(lightPosition) - cam->getCamPosition());
+	
+
+	glUniform3f(glGetUniformLocation(curr_program, "v3LightDir"), lightPos.x, lightPos.y, lightPos.z);
 	glUniform3f(glGetUniformLocation(curr_program, "v3InvWavelength"), 1.0f / powf(0.650f, 4.0f), 1.0f / powf(0.570f, 4.0f), 1.0f / powf(0.475f, 4.0f));
 	glUniform1f(glGetUniformLocation(curr_program, "fInnerRadius"), innerRadius);
 	glUniform1f(glGetUniformLocation(curr_program, "fInnerRadius2"), innerRadius * innerRadius);
@@ -276,7 +279,7 @@ void render(){
 	glUniform1f(glGetUniformLocation(curr_program, "fScaleOverScaleDepth"), scaleOverScaleDepth);
 	glUniform1f(glGetUniformLocation(curr_program, "g"), g);
 	glUniform1f(glGetUniformLocation(curr_program, "g2"), g * g);
-	glUniform1i(glGetUniformLocation(curr_program, "Samples"), 10);
+	glUniform1i(glGetUniformLocation(curr_program, "Samples"), 4);
 
 	glUniform3fv(glGetUniformLocation(curr_program, "v3CameraPos"), 1, glm::value_ptr(cam->getCamPosition()));
 	glUniform1f(glGetUniformLocation(curr_program, "fCameraHeight"), camHeight);
@@ -366,8 +369,8 @@ void keyboard(unsigned char key, int x, int y){
 	case 'F':
 		if(fullScreen){
 			fullScreen = false;
+			glViewport(0, 0, VIEW_SIZE_WIDTH, VIEW_SIZE_HEIGHT);
 			cam->setAspectRatio(VIEW_ASPECT_RATIO);
-			cam->setupCamera(curr_program);
 			glutReshapeWindow(VIEW_SIZE_WIDTH, VIEW_SIZE_HEIGHT);
 		}else{
 			fullScreen = true;
@@ -380,7 +383,7 @@ void keyboard(unsigned char key, int x, int y){
 			FULLSCREEN_HEIGHT = target.rcMonitor.bottom - target.rcMonitor.top;
 			FULLSCREEN_ASPECT_RATIO = FULLSCREEN_WIDTH / FULLSCREEN_HEIGHT;
 			cam->setAspectRatio(FULLSCREEN_ASPECT_RATIO);
-			cam->setupCamera(curr_program);
+			glViewport(0, 0, FULLSCREEN_WIDTH, FULLSCREEN_HEIGHT);
 			glutFullScreen();
 		}
 		break;
@@ -402,6 +405,15 @@ void keyboard(unsigned char key, int x, int y){
 	}
 
 
+}
+
+void reshape(int width, int height)
+{
+	glViewport(0, 0, width, height);
+	VIEW_SIZE_WIDTH = width;
+	VIEW_SIZE_HEIGHT = height;
+	VIEW_ASPECT_RATIO = float(width) / height;
+	cam->setAspectRatio(VIEW_ASPECT_RATIO);
 }
 
 //function to track the mouse for camera
@@ -436,6 +448,7 @@ int main(int argc, char** argv){
 
 	glutDisplayFunc(render);
 	glutKeyboardFunc(keyboard);
+	glutReshapeFunc(reshape);
 
 	//uncomment/comment this to enable/disable camera mouse-movement.
 	glutPassiveMotionFunc(mouseMove);

@@ -9,7 +9,7 @@ uniform mat4 view;
 uniform mat4 model;
 
 uniform vec3 v3CameraPos;			// The camera's current position
-uniform vec3 v3LightPos;			// The direction vector to the light source
+uniform vec3 v3LightDir;			// The direction vector to the light source
 uniform vec3 v3InvWavelength;		// 1 / pow(wavelength, 4) for the red, green, and blue channels
 uniform float fCameraHeight;		// The camera's current height
 uniform float fCameraHeight2;		// fCameraHeight^2
@@ -68,7 +68,7 @@ void main(){
 	{
 		float fHeight = length(v3SamplePoint);
 		float fDepth = exp(fScaleOverScaleDepth * (fInnerRadius - fHeight));
-		float fLightAngle = dot(v3LightPos, v3SamplePoint) / fHeight;
+		float fLightAngle = dot(v3LightDir, v3SamplePoint) / fHeight;
 		float fCameraAngle = dot(v3Ray, v3SamplePoint) / fHeight;
 		float fScatter = (fStartOffset + fDepth * (scale(fLightAngle) - scale(fCameraAngle)));
 		vec3 v3Attenuate = exp(-fScatter * (v3InvWavelength * fKr4PI + fKm4PI));
