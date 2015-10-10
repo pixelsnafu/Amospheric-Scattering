@@ -129,7 +129,7 @@ void Sphere::animate(){
 	if(theta < 2 * PI)
 		theta += revSpeed;
 	else
-		theta = 0;
+		theta -= 2 * PI;
 	this->translate[0] = sunDistance * cos(theta);
 	this->translate[2] = sunDistance * sin(theta);
 	this->angle[1] += rotSpeed;

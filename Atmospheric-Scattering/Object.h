@@ -86,8 +86,10 @@ public:
 	void setScale(float x, float y, float z);
 	virtual void setPosition(float x, float y, float z);
 
-	Vec3f getPosition();
-	Vec3f getSize();
+	Vec3f getPosition() const;
+	Vec3f getSize() const;
+	glm::mat4 getRotationMatrix() const;
+	glm::vec3 getRotation() const;
 
 	void setDiffuseColor(float x, float y, float z);
 	void setTextureHandles(map<string, string>);

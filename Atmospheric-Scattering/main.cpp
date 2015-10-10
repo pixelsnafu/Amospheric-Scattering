@@ -39,7 +39,7 @@ float f = 10000.5f;
 GLuint vao[40];
 GLuint vbo[2];
 GLuint vertexAttribute, texAttribute;
-GLuint program, skybox_program, normalmap_program, atmosphere_program, curr_program;
+GLuint cloudmap_program, skybox_program, normalmap_program, atmosphere_program, curr_program;
 GLuint vao_index = 0;
 
 //camera variables
@@ -101,9 +101,44 @@ void initBuffers(GLuint& index, GLuint program){
 	++index;
 }
 
+void initAtmosphericUniforms(vector<GLuint> shaderPrograms)
+{
+	GLfloat innerRadius = s->getRadius() * s->getSize().x;
+	GLfloat outerRadius = as->getRadius() * as->getSize().x;
+	GLfloat scale = 1.0f / (outerRadius - innerRadius);
+	GLfloat scaleDepth = 0.25;
+	GLfloat scaleOverScaleDepth = scale / scaleDepth;
+	GLfloat Kr = 0.0025f;
+	GLfloat Km = 0.0010f;
+	GLfloat ESun = 16.0f;
+	GLfloat g = -0.99f;
+
+	for (GLuint i = 0; i < shaderPrograms.size(); i++)
+	{
+		glUseProgram(shaderPrograms[i]);
+		glUniform3f(glGetUniformLocation(shaderPrograms[i], "v3InvWavelength"), 1.0f / powf(0.650f, 4.0f), 1.0f / powf(0.570f, 4.0f), 1.0f / powf(0.475f, 4.0f));
+		glUniform1f(glGetUniformLocation(shaderPrograms[i], "fInnerRadius"), innerRadius);
+		glUniform1f(glGetUniformLocation(shaderPrograms[i], "fInnerRadius2"), innerRadius * innerRadius);
+		glUniform1f(glGetUniformLocation(shaderPrograms[i], "fOuterRadius"), outerRadius);
+		glUniform1f(glGetUniformLocation(shaderPrograms[i], "fOuterRadius2"), outerRadius * outerRadius);
+		glUniform1f(glGetUniformLocation(shaderPrograms[i], "fKrESun"), Kr * ESun);
+		glUniform1f(glGetUniformLocation(shaderPrograms[i], "fKmESun"), Km * ESun);
+		glUniform1f(glGetUniformLocation(shaderPrograms[i], "fKr4PI"), Kr * 4.0f * (float)PI);
+		glUniform1f(glGetUniformLocation(shaderPrograms[i], "fKm4PI"), Km * 4.0f * (float)PI);
+		glUniform1f(glGetUniformLocation(shaderPrograms[i], "fScale"), scale);
+		glUniform1f(glGetUniformLocation(shaderPrograms[i], "fScaleDepth"), scaleDepth);
+		glUniform1f(glGetUniformLocation(shaderPrograms[i], "fScaleOverScaleDepth"), scaleOverScaleDepth);
+		glUniform1f(glGetUniformLocation(shaderPrograms[i], "g"), g);
+		glUniform1f(glGetUniformLocation(shaderPrograms[i], "g2"), g * g);
+		glUniform1i(glGetUniformLocation(shaderPrograms[i], "Samples"), 4);
+	}
+
+	glUseProgram(0);
+}
+
 void init(){
-	program = setUpAShader("shaders/normalmap_shader.vert", "shaders/cloudmap_shader.frag");
-	if(!program)
+	cloudmap_program = setUpAShader("shaders/normalmap_shader.vert", "shaders/cloudmap_shader.frag");
+	if (!cloudmap_program)
 	{
 		cerr<<"Error setting up Shaders!";
 		exit(1);
@@ -124,7 +159,7 @@ void init(){
 	}
 
 	skybox_program = setUpAShader("shaders/skybox.vert", "shaders/skybox.frag");
-	if(!program)
+	if (!skybox_program)
 	{
 		cerr<<"Error setting up Shaders!";
 		exit(1);
@@ -153,7 +188,7 @@ void init(){
 
 	textureManager.LoadTextureCubeMap(faces, "skybox");
 	textureManager.LoadTexture2D("textures/earth_day_8k.jpg", "earthDay");
-	textureManager.LoadTexture2D("textures/earth_night_8k.jpg", "earthNight");
+	textureManager.LoadTexture2D("textures/earth_night_8k_blur.png", "earthNight");
 	textureManager.LoadTexture2D("textures/earth_specular.jpg", "earthSpecularMap");
 	textureManager.LoadTexture2D("textures/earth_normalmap_8k.jpg", "earthNormalMap");
 	textureManager.LoadTexture2D("textures/earth_clouds_8k.jpg", "earthClouds");
@@ -168,6 +203,7 @@ void init(){
 	textureHandles.insert(make_pair("earthNight", "night"));
 	textureHandles.insert(make_pair("earthSpecularMap", "specMap"));
 	textureHandles.insert(make_pair("earthNormalMap", "bumpMap"));
+	textureHandles.insert(make_pair("earthClouds", "clouds"));
 
 	s = new Sphere(vao_index, 1.0f, 50, 50, 0.005f, 0.f);
 	s->generateMesh();
@@ -177,7 +213,7 @@ void init(){
 	s->initBuffers(curr_program);
 	
 	vao_index++;
-	curr_program = program;
+	curr_program = cloudmap_program;
 
 	textureHandles.clear();
 	textureHandles.insert(make_pair("earthClouds", "clouds"));
@@ -214,22 +250,54 @@ void init(){
 	skybox->setTextureHandles(textureHandles);
 	skybox->enableCubemap();
 	skybox->initBuffers(curr_program);
+
+	vector<GLuint> shaderPrograms;
+	shaderPrograms.push_back(atmosphere_program);
+	shaderPrograms.push_back(normalmap_program);
+	initAtmosphericUniforms(shaderPrograms);
 }
 
 void render(){
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	GLfloat camHeight = glm::length(cam->getCamPosition());
+	glm::vec3 lightPos = glm::normalize(glm::vec3(lightPosition) - cam->getCamPosition());
 	
 	curr_program = normalmap_program;
 	glUseProgram(curr_program);
 	cam->setupCamera(curr_program);
 
+	glUniform3f(glGetUniformLocation(curr_program, "v3LightDir"), lightPos.x, lightPos.y, lightPos.z);
+	glUniform3fv(glGetUniformLocation(curr_program, "v3CameraPos"), 1, glm::value_ptr(cam->getCamPosition()));
+	glUniform1f(glGetUniformLocation(curr_program, "fCameraHeight"), camHeight);
+	glUniform1f(glGetUniformLocation(curr_program, "fCameraHeight2"), camHeight * camHeight);
+
 	glUniform4fv(glGetUniformLocation(curr_program, "lightPosition"), 1, glm::value_ptr(lightPosition));
 	glUniform4fv(glGetUniformLocation(curr_program, "lightColor"), 1, glm::value_ptr(lightColor));
 
-	s->render(curr_program, textureManager);
-	s->animate();
+	glm::vec3 diffRotation = cs->getRotation() - s->getRotation();	
+	glm::mat4 diffRotationMatrix = glm::rotate(glm::mat4(1.0f), diffRotation.y, glm::vec3(0.0f, 1.0f, 0.0f));
 
-	curr_program = program;
+	glUniformMatrix4fv(glGetUniformLocation(curr_program, "cloudRotation"), 1, false, glm::value_ptr(diffRotationMatrix));
+	glUniform1f(glGetUniformLocation(curr_program, "yRotation"), diffRotation.y);
+
+	s->render(curr_program, textureManager);
+	
+	glCullFace(GL_FRONT);
+	curr_program = atmosphere_program;
+	glUseProgram(curr_program);
+	cam->setupCamera(curr_program);	
+
+	glUniform3f(glGetUniformLocation(curr_program, "v3LightDir"), lightPos.x, lightPos.y, lightPos.z);
+	glUniform3fv(glGetUniformLocation(curr_program, "v3CameraPos"), 1, glm::value_ptr(cam->getCamPosition()));
+	glUniform1f(glGetUniformLocation(curr_program, "fCameraHeight"), camHeight);
+	glUniform1f(glGetUniformLocation(curr_program, "fCameraHeight2"), camHeight * camHeight);
+
+	as->render(curr_program, textureManager);
+ 
+	glCullFace(GL_BACK);
+
+	curr_program = cloudmap_program;
 
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_ONE, GL_ONE);
@@ -240,54 +308,9 @@ void render(){
 	glUniform4fv(glGetUniformLocation(curr_program, "lightColor"), 1, glm::value_ptr(lightColor * glm::vec4(0.75, 0.75, 0.75, 1.0)));
 
 	cs->render(curr_program, textureManager);
-	cs->animate();
 
 	glDisable(GL_BLEND);
 	glDepthMask(GL_TRUE);
-	
-	glCullFace(GL_FRONT);
-	curr_program = atmosphere_program;
-	glUseProgram(curr_program);
-	cam->setupCamera(curr_program);
-
-	GLfloat innerRadius = s->getRadius() * s->getSize().x;
-	GLfloat outerRadius = as->getRadius() * as->getSize().x;
-	GLfloat scale = 1.0f / (outerRadius - innerRadius);
-	GLfloat scaleDepth = as->getSize().x - s->getSize().x;
-	GLfloat scaleOverScaleDepth = scale / scaleDepth;
-	GLfloat Kr = 0.0030f;
-	GLfloat Km = 0.0015f;
-	GLfloat ESun = 16.0f;
-	GLfloat g = -0.75f;
-	GLfloat camHeight = glm::length(cam->getCamPosition());
-
-	glm::vec3 lightPos = glm::normalize(glm::vec3(lightPosition) - cam->getCamPosition());
-	
-
-	glUniform3f(glGetUniformLocation(curr_program, "v3LightDir"), lightPos.x, lightPos.y, lightPos.z);
-	glUniform3f(glGetUniformLocation(curr_program, "v3InvWavelength"), 1.0f / powf(0.650f, 4.0f), 1.0f / powf(0.570f, 4.0f), 1.0f / powf(0.475f, 4.0f));
-	glUniform1f(glGetUniformLocation(curr_program, "fInnerRadius"), innerRadius);
-	glUniform1f(glGetUniformLocation(curr_program, "fInnerRadius2"), innerRadius * innerRadius);
-	glUniform1f(glGetUniformLocation(curr_program, "fOuterRadius"), outerRadius);
-	glUniform1f(glGetUniformLocation(curr_program, "fOuterRadius2"), outerRadius * outerRadius);
-	glUniform1f(glGetUniformLocation(curr_program, "fKrESun"), Kr * ESun);
-	glUniform1f(glGetUniformLocation(curr_program, "fKmESun"), Km * ESun);
-	glUniform1f(glGetUniformLocation(curr_program, "fKr4PI"), Kr * 4.0f * (float)PI);
-	glUniform1f(glGetUniformLocation(curr_program, "fKm4PI"), Km * 4.0f * (float)PI);
-	glUniform1f(glGetUniformLocation(curr_program, "fScale"), scale);
-	glUniform1f(glGetUniformLocation(curr_program, "fScaleDepth"), scaleDepth);
-	glUniform1f(glGetUniformLocation(curr_program, "fScaleOverScaleDepth"), scaleOverScaleDepth);
-	glUniform1f(glGetUniformLocation(curr_program, "g"), g);
-	glUniform1f(glGetUniformLocation(curr_program, "g2"), g * g);
-	glUniform1i(glGetUniformLocation(curr_program, "Samples"), 4);
-
-	glUniform3fv(glGetUniformLocation(curr_program, "v3CameraPos"), 1, glm::value_ptr(cam->getCamPosition()));
-	glUniform1f(glGetUniformLocation(curr_program, "fCameraHeight"), camHeight);
-	glUniform1f(glGetUniformLocation(curr_program, "fCameraHeight2"), camHeight * camHeight);
-
-	as->render(curr_program, textureManager);
- 
-	glCullFace(GL_BACK);
 
 	curr_program = skybox_program;
 
@@ -301,6 +324,10 @@ void render(){
 	glUniformMatrix4fv(glGetUniformLocation(skybox_program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 	skybox->render(skybox_program, textureManager);
 	glDepthFunc(GL_LESS); // Set the depth function to default after rendering the skybox
+
+	//animate the cloud and earth spheres
+	s->animate();
+	cs->animate();
 
 	glutPostRedisplay();
 	glutSwapBuffers();
@@ -322,12 +349,11 @@ string getScreenShotFileName(){
 
 void keyboard(unsigned char key, int x, int y){
 
-	const float cameraIntersectionThreshold = 1.05f;
+	const float cameraIntersectionThreshold = 1.005f;
 
 	switch(key){
 	case 27:
 		glutLeaveMainLoop();
-		exit(0);
 		break;
 
 	case 'D':
@@ -410,8 +436,11 @@ void keyboard(unsigned char key, int x, int y){
 void reshape(int width, int height)
 {
 	glViewport(0, 0, width, height);
-	VIEW_SIZE_WIDTH = width;
-	VIEW_SIZE_HEIGHT = height;
+	if (!fullScreen)
+	{
+		VIEW_SIZE_WIDTH = width;
+		VIEW_SIZE_HEIGHT = height;
+	}
 	VIEW_ASPECT_RATIO = float(width) / height;
 	cam->setAspectRatio(VIEW_ASPECT_RATIO);
 }

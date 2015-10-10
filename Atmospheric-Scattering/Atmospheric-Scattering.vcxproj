@@ -89,8 +89,6 @@
     <None Include="shaders\cloudmap_shader.frag" />
     <None Include="shaders\normalmap_shader.frag" />
     <None Include="shaders\normalmap_shader.vert" />
-    <None Include="shaders\shader.frag" />
-    <None Include="shaders\shader.vert" />
     <None Include="shaders\skybox.frag" />
     <None Include="shaders\skybox.vert" />
   </ItemGroup>

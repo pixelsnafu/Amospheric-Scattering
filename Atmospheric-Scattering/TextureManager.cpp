@@ -26,9 +26,14 @@ void TextureManager::LoadTexture2D(string filename, string textureAlias)
 
 	glEnable(GL_TEXTURE_2D);
 
-	unsigned char* imgData =
-		SOIL_load_image(filename.c_str(), &width, &height, 0, SOIL_LOAD_RGBA);
+	unsigned char* imgData = NULL;
+	imgData = SOIL_load_image(filename.c_str(), &width, &height, 0, SOIL_LOAD_RGBA);
 	
+	if (imgData == NULL)
+	{
+		cout << "Error loading Image!" << endl;
+		exit(1);
+	}
 	
 	glGenTextures(1, &textureID);
 	glBindTexture(GL_TEXTURE_2D, textureID);

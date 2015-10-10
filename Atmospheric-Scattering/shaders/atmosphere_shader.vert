@@ -49,12 +49,37 @@ void main(){
 	float fDet = max(0.0, B * B - 4.0 * C);
 	float fNear = 0.5 * (-B - sqrt(fDet));
 	
+	bool sfs;
+	if ( fCameraHeight > fOuterRadius )
+		sfs = true;
+	else
+		sfs = false;
+
 	// Calculate the ray's starting position, then calculate its scattering offset
-	vec3 v3Start = v3CameraPos + v3Ray * fNear;
+	vec3 v3Start;
+	if (sfs)
+		v3Start = v3CameraPos + v3Ray * fNear;
+	else
+		v3Start = v3CameraPos;
+
+	float fHeight = length(v3Start);
+	float fDepth = exp(fScaleOverScaleDepth * (fInnerRadius - fCameraHeight));
+
 	fFar -= fNear;
-	float fStartAngle = dot(v3Ray, v3Start) / fOuterRadius;
+
+	float fStartAngle;
+	if (sfs)
+		fStartAngle = dot(v3Ray, v3Start) / fOuterRadius;
+	else
+		fStartAngle = dot(v3Ray, v3Start) / fHeight;
+
 	float fStartDepth = exp(-1.0 / fScaleDepth);
-	float fStartOffset = fStartDepth * scale(fStartAngle);
+
+	float fStartOffset;
+	if (sfs)
+		fStartOffset = fStartDepth * scale(fStartAngle);
+	else
+		fStartOffset = fDepth * scale(fStartAngle);
 
 	// Initialize the scattering loop variables
 	float fSampleLength = fFar / Samples;

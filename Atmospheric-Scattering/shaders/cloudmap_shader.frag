@@ -28,7 +28,7 @@ void main(){
 
 	vec4 cloud_color			=	texture2D( clouds, texCoord);
 	vec3 day_color				=	cloud_color.rgb * clamp(diffuse, 0.0, 0.6);
-	vec3 night_color			=	cloud_color.rgb * 0.2;// * clamp(inv_diffuse, 0.0, 0.5);
+	vec3 night_color			=	cloud_color.rgb * 0.15;// * clamp(inv_diffuse, 0.0, 0.5);
 	
 	
 	vec3 color = day_color;

@@ -47,13 +47,27 @@ void Object::setPosition(float x, float y, float z){
 	this->translate[2] = z;
 }
 
-Vec3f Object::getPosition(){
+Vec3f Object::getPosition() const
+{
 	return Vec3f(translate[0], translate[1], translate[2]);
 }
 
-Vec3f Object::getSize()
+Vec3f Object::getSize() const
 {
 	return Vec3f(scale[0], scale[1], scale[2]);
+}
+
+glm::vec3 Object::getRotation() const
+{
+	return glm::vec3(angle[0], angle[1], angle[2]);
+}
+
+glm::mat4 Object::getRotationMatrix() const
+{
+	glm::mat4 rotationMatrix_X = glm::rotate(glm::mat4(1.0f), angle[0], glm::vec3(1.0f, 0.0f, 0.0f));
+	glm::mat4 rotationMatrix_Y = glm::rotate(glm::mat4(1.0f), angle[1], glm::vec3(0.0f, 1.0f, 0.0f));
+	glm::mat4 rotationMatrix_Z = glm::rotate(glm::mat4(1.0f), angle[2], glm::vec3(0.0f, 0.0f, 1.0f));
+	return rotationMatrix_X * rotationMatrix_Y * rotationMatrix_Z;
 }
 
 void Object::setRotation(float x, float y, float z){
