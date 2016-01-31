@@ -87,8 +87,10 @@
     <None Include="shaders\atmosphere_shader.frag" />
     <None Include="shaders\atmosphere_shader.vert" />
     <None Include="shaders\cloudmap_shader.frag" />
+    <None Include="shaders\fxaa.frag" />
     <None Include="shaders\normalmap_shader.frag" />
     <None Include="shaders\normalmap_shader.vert" />
+    <None Include="shaders\quad.vert" />
     <None Include="shaders\skybox.frag" />
     <None Include="shaders\skybox.vert" />
   </ItemGroup>

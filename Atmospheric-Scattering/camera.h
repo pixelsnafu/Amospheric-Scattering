@@ -14,7 +14,7 @@
 
 
 #define PI 3.14159
-#define MOVE_FACTOR 0.05f
+#define MOVE_FACTOR 0.15f
 
 using namespace std; 
 

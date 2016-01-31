@@ -19,6 +19,30 @@ TextureManager& TextureManager::GetInstance()
 	return *m_Instance.get();
 }
 
+void TextureManager::GenerateFBOTexture2D(string texAlias, int width, int height, bool isDepth)
+{
+	GLuint textureID;
+	glGenTextures(1, &textureID);
+	glBindTexture(GL_TEXTURE_2D, textureID);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, (isDepth ? GL_DEPTH_COMPONENT : GL_RGBA),
+		width, height, 0, (isDepth ? GL_DEPTH_COMPONENT : GL_RGBA), GL_FLOAT, NULL);
+
+	//texture parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	if (glGetError()){
+		cout << "Error while creating Empty Texture: " << gluErrorString(glGetError()) << endl;
+	}
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	m_texIDMap.insert(make_pair(texAlias, textureID));
+}
+
 void TextureManager::LoadTexture2D(string filename, string textureAlias)
 {
 	int width, height;
@@ -48,7 +72,7 @@ void TextureManager::LoadTexture2D(string filename, string textureAlias)
 	{
 		GLfloat maxAnisotropySamples;
 		glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maxAnisotropySamples);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, maxAnisotropySamples);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, maxAnisotropySamples);
 
 	}
 

@@ -46,12 +46,19 @@ public:
 	static TextureManager& GetInstance();
 	void LoadTexture2D(string filename, string textureAlias);
 	void LoadTextureCubeMap(vector<string> textureFaces, string textureAlias);
+	void GenerateFBOTexture2D(string texAlias, int width, int height, bool isDepth = false);
 	void BindTexture2D(string texAlias, string sampler, GLuint program);
 	void BindTextureCubeMap(string texAlias, string sampler, GLuint program);
 	void unbindTexture(string texAlias);
 	void unbindAllTextures();
 
-
+	const GLuint& operator[] (const string& texAlias)
+	{
+		if (m_texIDMap.find(texAlias) == m_texIDMap.end())
+			return 0;
+		else
+			return m_texIDMap.at(texAlias);
+	}
 };
 
 #endif

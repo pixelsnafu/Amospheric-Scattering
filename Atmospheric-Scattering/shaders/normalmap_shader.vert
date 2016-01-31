@@ -37,6 +37,8 @@ out vec3 eyeVec;
 out vec3 halfVec;
 
 out vec3 vPos;
+out vec3 vNorm;
+out vec3 lPos;
 
 out vec4 frontColor;
 out vec4 secondaryFrontColor;
@@ -82,6 +84,12 @@ void main()
 	temp.z = dot (halfVector, n);
 
 	halfVec = temp ; 
+
+	vec4 lightInEye = view * lightPosition;
+	vec4 normalInEye = normalize(modelView * vec4(vNormal, 0.0));
+
+	lPos = lightInEye.xyz;
+	vNorm = normalInEye.xyz;
 
 	texCoord = vTexCoord;
 
@@ -147,7 +155,7 @@ void main()
 
 	// Calculate earth's surface brightness according to distance of the camera 
 	// from the outer radius.
-	cameraDistance = clamp(abs(fOuterRadius - fCameraHeight), 0.1, 0.35);
+	cameraDistance = clamp(abs(fOuterRadius - fCameraHeight), 0.1, 0.5);
 
 	frontColor.rgb = v3FrontColor * (v3InvWavelength * fKrESun + fKmESun);
 	// Calculate the attenuation factor for the ground
