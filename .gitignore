@@ -117,7 +117,7 @@ ClientBin/
 *.[Pp]ublish.xml
 *.pfx
 *.publishsettings
-Atmospheric-Scattering\Atmospheric-Scattering\screenshots\
+Atmospheric-Scattering/screenshots/
 
 # RIA/Silverlight projects
 Generated_Code/
