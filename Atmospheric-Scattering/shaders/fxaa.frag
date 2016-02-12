@@ -45,9 +45,4 @@ void main()
 		gl_FragColor = vec4(result1, 1.0);
 	else
 		gl_FragColor = vec4(result2, 1.0);
-
-	//float tempVal = (lumaTL + lumaTR + lumaBL + lumaBR + lumaM) * 0.2;
-
-	//gl_FragColor = texture(scene, uv);
-	//gl_FragColor = vec4(tempVal);
 }

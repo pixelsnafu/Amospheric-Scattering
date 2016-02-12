@@ -401,7 +401,7 @@ void Object::render(const GLuint& program, TextureManager& textureManager){
 			textureManager.BindTexture2D(iter->first, iter->second, program);
 		}
 	}
-
+	
 	//set the uniforms
 	glUniform1i(glGetUniformLocation(program, "lightSwitch"), lightSwitch);
 	glUniform4fv(glGetUniformLocation(program, "diffuseColor"), 1, diffuse);
@@ -412,7 +412,7 @@ void Object::render(const GLuint& program, TextureManager& textureManager){
 	glm::mat4 rotationMatrix_Y = glm::rotate(glm::mat4(1.0f), angle[1], glm::vec3(0.0f, 1.0f, 0.0f));
 	glm::mat4 rotationMatrix_Z = glm::rotate(glm::mat4(1.0f), angle[2], glm::vec3(0.0f, 0.0f, 1.0f));
 
-	glm::mat4 modelMatrix = scaleMatrix * translateMatrix * rotationMatrix_X * rotationMatrix_Y * rotationMatrix_Z;
+	glm::mat4 modelMatrix = scaleMatrix * rotationMatrix_X * rotationMatrix_Y * rotationMatrix_Z * translateMatrix;
 
 	glUniformMatrix4fv(glGetUniformLocation(program, "model"), 1, false, glm::value_ptr(modelMatrix));
 
@@ -422,7 +422,7 @@ void Object::render(const GLuint& program, TextureManager& textureManager){
 
 	textureManager.unbindAllTextures();
 
-	glUseProgram(0);
+	//glUseProgram(0);
 }
 
 

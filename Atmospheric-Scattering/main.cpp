@@ -1,7 +1,9 @@
 #include <gl/glew.h>
-#include <gl/freeglut.h>
+#include <gl//freeglut.h>
 #include <gl/GL.h>
 #include <glm\glm.hpp>
+#include <glm\ext.hpp>
+#include <glm\gtx\string_cast.hpp>
 #include <glm\gtc\type_ptr.hpp>
 #include <iostream>
 #include <vector>
@@ -18,11 +20,12 @@
 using namespace std;
 
 int VIEW_SIZE_WIDTH = 1024;
-int VIEW_SIZE_HEIGHT = 768;
+int VIEW_SIZE_HEIGHT = 576;
 
 float FULLSCREEN_WIDTH, FULLSCREEN_HEIGHT, FULLSCREEN_ASPECT_RATIO;
 float VIEW_ASPECT_RATIO = (float)VIEW_SIZE_WIDTH/(float)VIEW_SIZE_HEIGHT;
 int SCENE_WIDTH = 1920, SCENE_HEIGHT = 1080;
+int SUN_WIDTH = 640, SUN_HEIGHT = 360;
 int VIEWPORT_WIDTH = VIEW_SIZE_WIDTH, VIEWPORT_HEIGHT = VIEW_SIZE_HEIGHT;
 
 //camera variables
@@ -40,24 +43,24 @@ float f = 10000.5f;
 //Buffer/shader variables
 GLuint vao[40];
 GLuint vbo[2];
-GLuint sceneFbo, sceneMultisampleFbo;
+GLuint sceneFbo, sceneMultisampleFbo, sunFbo, blurFbo, sunScatterFbo;
 GLuint textureColorBufferMultiSampled;
 GLuint vertexAttribute, texAttribute;
-GLuint cloudmap_program, skybox_program, normalmap_program, atmosphere_program, fxaa_program, curr_program;
+GLuint cloudmap_program, skybox_program, normalmap_program, atmosphere_program, fxaa_program, curr_program,
+	   sun_program, sun_scatter_program, blur_program, quad_program;
 GLuint vao_index = 0;
 
 //camera variables
 glm::vec3 up_vector(0, 1, 0);
 glm::vec3 camera_position(0.0, 0.0, -25.0);
-glm::vec3 camera_lookat(0.0, 0.0, 0.0);
+glm::vec3 camera_lookat(100.0, 0.0, 100.0);
 
 glm::mat4 scale(glm::scale(glm::mat4(1.0f), glm::vec3(5.0f, 5.0f, 5.0f)));
 float rotation[3] = {0.0, 0.0, 0.0};
 float sphereScale = 10.0f;
 
 glm::vec4 lightColor(1.25, 1.25, 1.25, 1.0);
-glm::vec4 lightPosition(100.0, 0.0, 100.0, 1.0);
-glm::vec4 cloudLightPosition(50.0, 0.0, 50.0, 1.0);
+glm::vec4 lightPosition(17.0, 0.0, 17.0, 1.0);
 
 //quad variables
 // x,y vertex positions
@@ -80,7 +83,8 @@ float quad_texcoords[] = {
 	0.0, 0.0
 };
 
-Sphere *s, *cs, *as;
+// Object variables
+shared_ptr<Sphere> s, cs, as, ss;
 Skybox* skybox;
 TextureManager& textureManager = TextureManager::GetInstance();
 
@@ -122,35 +126,6 @@ void initBuffers(GLuint& index, GLuint program){
 	glEnableVertexAttribArray(texAttribute);
 	glVertexAttribPointer(texAttribute, 2, GL_FLOAT, GL_FALSE, 0, 0);
 }
-
-/*
-GLuint createFBOTexture(int w, int h, bool isDepth = false){
-
-	GLuint textureID;
-	glGenTextures(1, &textureID);
-	glBindTexture(GL_TEXTURE_2D, textureID);
-	glTexImage2D(GL_TEXTURE_2D, 0, (isDepth ? GL_DEPTH_COMPONENT : GL_RGBA),
-		w, h, 0, (isDepth ? GL_DEPTH_COMPONENT : GL_RGBA), GL_FLOAT, NULL);
-	
-	//glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 16, GL_RGBA, w, h, GL_TRUE);
-
-	//texture parameters
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	if (glGetError()){
-		cout << "Error while creating Empty Texture!" << endl;
-		cout << gluErrorString(glGetError()) << endl;
-	}
-
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	return textureID;
-}
-*/
-
 
 GLuint generateFrameBufferObject(const GLuint& renderTexture, const GLuint& depthTexture = 0){
 	GLuint fbo;
@@ -245,11 +220,47 @@ void initAtmosphericUniforms(vector<GLuint> shaderPrograms)
 	glUseProgram(0);
 }
 
+void renderBlurTexture(GLuint program, string inputTexture, string outputTexture, int radius)
+{
+	glUseProgram(program);
+	glUniform1i(glGetUniformLocation(program, "uBlurRadius"), radius);
+
+	// Horizontal Pass
+	glBindFramebuffer(GL_FRAMEBUFFER, blurFbo);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureManager["blurHColorTexture"], 0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glViewport(0, 0, SUN_WIDTH, SUN_HEIGHT);
+
+	glUniform2f(glGetUniformLocation(program, "uBlurDirection"), 1.0, 0.0);
+	
+	textureManager.BindTexture2D(inputTexture, "uInputTex", program);
+
+	glBindVertexArray(vao[vao_index]);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	// Vertical Pass
+	glBindFramebuffer(GL_FRAMEBUFFER, blurFbo);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureManager[outputTexture], 0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glViewport(0, 0, SUN_WIDTH, SUN_HEIGHT);
+
+	glUniform2f(glGetUniformLocation(program, "uBlurDirection"), 0.0, 1.0);
+
+	textureManager.BindTexture2D("blurHColorTexture", "uInputTex", program);
+
+	glBindVertexArray(vao[vao_index]);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
 void init(){
 	cloudmap_program = setUpAShader("shaders/normalmap_shader.vert", "shaders/cloudmap_shader.frag");
 	if (!cloudmap_program)
 	{
-		cerr<<"Error setting up Shaders!";
+		cerr << "Error setting up Shaders!";
 		exit(1);
 	}
 
@@ -270,7 +281,7 @@ void init(){
 	skybox_program = setUpAShader("shaders/skybox.vert", "shaders/skybox.frag");
 	if (!skybox_program)
 	{
-		cerr<<"Error setting up skybox shaders!";
+		cerr << "Error setting up skybox shaders!";
 		exit(1);
 	}
 
@@ -281,6 +292,36 @@ void init(){
 		exit(1);
 	}
 
+	sun_program = setUpAShader("shaders/sun.vert", "shaders/sun.frag");
+	if (!sun_program)
+	{
+		cerr << "Error setting up sun shaders!";
+		exit(1);
+	}
+
+	blur_program = setUpAShader("shaders/quad.vert", "shaders/blur.frag");
+	if (!blur_program)
+	{
+		cerr << "Error setting up blur shaders!";
+		exit(1);
+	}
+
+	quad_program = setUpAShader("shaders/quad.vert", "shaders/quad.frag");
+	if (!quad_program)
+	{
+		cerr << "Error setting up quad shaders!";
+		exit(1);
+	}
+
+	
+	sun_scatter_program = setUpAShader("shaders/quad.vert", "shaders/sun_scatter.frag");
+	if (!sun_scatter_program)
+	{
+		cerr << "Error setting up sun scatter shaders!";
+		exit(1);
+	}
+	
+
 	glGenVertexArrays(40, vao);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
@@ -290,7 +331,7 @@ void init(){
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glCullFace(GL_BACK);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	GLfloat aspect_ratio = (GLfloat) VIEW_SIZE_WIDTH / (GLfloat) VIEW_SIZE_HEIGHT;
+	GLfloat aspect_ratio = (GLfloat)VIEW_SIZE_WIDTH / (GLfloat)VIEW_SIZE_HEIGHT;
 	cam = new camera(camera_position, camera_lookat, up_vector, l, r, t, b, n, f, aspect_ratio);
 
 	vector<string> faces;
@@ -312,9 +353,21 @@ void init(){
 	textureManager.LoadTexture2D("textures/clouds_normalmap_8k.jpg", "earthCloudsNormalMap");
 	textureManager.GenerateFBOTexture2D("sceneColorTexture", SCENE_WIDTH, SCENE_HEIGHT);
 	textureManager.GenerateFBOTexture2D("sceneDepthTexture", SCENE_WIDTH, SCENE_HEIGHT, true);
+	textureManager.GenerateFBOTexture2D("sunColorTexture", SUN_WIDTH, SUN_HEIGHT);
+	textureManager.GenerateFBOTexture2D("sunDepthTexture", SUN_WIDTH, SUN_HEIGHT, true);
+	textureManager.GenerateFBOTexture2D("blurHColorTexture", SUN_WIDTH, SUN_HEIGHT);
+	textureManager.GenerateFBOTexture2D("blur16ColorTexture", SUN_WIDTH, SUN_HEIGHT);
+	textureManager.GenerateFBOTexture2D("blur32ColorTexture", SUN_WIDTH, SUN_HEIGHT);
+	textureManager.GenerateFBOTexture2D("blur64ColorTexture", SUN_WIDTH, SUN_HEIGHT);
+	textureManager.GenerateFBOTexture2D("blurXColorTexture", SUN_WIDTH, SUN_HEIGHT);
+	textureManager.GenerateFBOTexture2D("sunScatterColorTexture", SUN_WIDTH, SUN_HEIGHT);
 
-	sceneFbo = generateFrameBufferObject(textureManager["sceneColorTexture"] , textureManager["sceneDepthTexture"]);
 
+	sceneFbo = generateFrameBufferObject(textureManager["sceneColorTexture"], textureManager["sceneDepthTexture"]);
+	sunFbo = generateFrameBufferObject(textureManager["sunColorTexture"], textureManager["sunDepthTexture"]);
+	blurFbo = generateFrameBufferObject(textureManager["blurHColorTexture"]);// , textureManager["blurDepthTexture"]);
+	sunScatterFbo = generateFrameBufferObject(textureManager["sunScatterColorTexture"]);
+	
 	map<string, string> textureHandles;
 
 	curr_program = normalmap_program;
@@ -326,7 +379,7 @@ void init(){
 	textureHandles.insert(make_pair("earthNormalMap", "bumpMap"));
 	textureHandles.insert(make_pair("earthClouds", "clouds"));
 
-	s = new Sphere(vao[vao_index], 1.0f, 50, 50, 0.005f, 0.f);
+	s = shared_ptr<Sphere>(new Sphere(vao[vao_index], 1.0f, 50, 50, 0.005f, 0.f));
 	s->generateMesh();
 	s->setTextureHandles(textureHandles);
 	s->setScale(sphereScale, sphereScale, sphereScale);
@@ -342,8 +395,8 @@ void init(){
 	textureHandles.insert(make_pair("earthNightBlur", "nightLights"));
 
 
-	float cloudScale = sphereScale + 0.1;
-	cs = new Sphere(vao[vao_index], 1.0f, 50, 50, 0.0065f, 0.f);
+	float cloudScale = sphereScale + 0.05;
+	cs = shared_ptr<Sphere>(new Sphere(vao[vao_index], 1.0f, 50, 50, 0.0065f, 0.f));
 	cs->generateMesh();
 	cs->setTextureHandles(textureHandles);
 	cs->setScale(cloudScale, cloudScale, cloudScale);
@@ -353,11 +406,19 @@ void init(){
 	vao_index++;
 	curr_program = atmosphere_program;
 
-	as = new Sphere(vao[vao_index], 1.0f, 50, 50, 0.0, 0.0);
+	as = shared_ptr<Sphere>(new Sphere (vao[vao_index], 1.0f, 50, 50, 0.0, 0.0));
 	GLfloat atmosphereScale = sphereScale + 0.15f;
 	as->setScale(atmosphereScale, atmosphereScale, atmosphereScale);
 	as->generateMesh();
 	as->initBuffers(curr_program);
+
+	vao_index++;
+	curr_program = sun_program;
+	ss = shared_ptr<Sphere>(new Sphere(vao[vao_index], 1.0f, 50, 50, 0.0, 0.0));
+	ss->setPosition(lightPosition[0], lightPosition[1], lightPosition[2]);
+	ss->setScale(150, 150, 150);
+	ss->generateMesh();
+	ss->initBuffers(curr_program);
 
 	vao_index++;
 	curr_program = skybox_program;
@@ -445,6 +506,12 @@ void render(){
 	glDisable(GL_BLEND);
 	glDepthMask(GL_TRUE);
 
+	curr_program = sun_program;
+
+	cam->setupCamera(curr_program);
+	glUniform3f(glGetUniformLocation(curr_program, "color"), 1.0, 0.941, 0.898);
+	ss->render(curr_program, textureManager);
+
 	curr_program = skybox_program;
 
 	//rendering the skybox
@@ -464,20 +531,81 @@ void render(){
 	
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+	//--------------------------------------------------------------------------------------
+	// Render minimalistic sun for blurring/bloom.
+
+	glBindFramebuffer(GL_FRAMEBUFFER, sunFbo);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glViewport(0, 0, SUN_WIDTH, SUN_HEIGHT);
+	
+	curr_program = sun_program;
+	glUseProgram(curr_program);
+	
+	cam->setupCamera(curr_program);
+
+	GLuint isSunLocation = glGetUniformLocation(curr_program, "isSun");
+	
+	glUniform1i(isSunLocation, 1);
+	ss->render(curr_program, textureManager);
+	
+	glUniform1i(isSunLocation, 0);
+	s->render(curr_program, textureManager);
+	
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	//--------------------------------------------------------------------------------------
+	// Render God rays to texture
+	glBindFramebuffer(GL_FRAMEBUFFER, sunScatterFbo);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glViewport(0, 0, SUN_WIDTH, SUN_HEIGHT);
+
+	curr_program = sun_scatter_program;
+	glUseProgram(curr_program);
+
+	glm::mat4 translateMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(lightPosition[0], lightPosition[1], lightPosition[2]));
+	glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(150));
+	// Transform light coordinates from World to Screen-space coordinates.
+	glm::vec3 lightScreen = glm::project(glm::vec3(lightPosition), cam->getCameraViewMatrix() * scaleMatrix * translateMatrix, cam->getCameraProjectionMatrix(), glm::vec4(0, 0, SUN_WIDTH, SUN_HEIGHT));
+
+	glUniform2f(glGetUniformLocation(curr_program, "lightPosition"), lightScreen.x / SUN_WIDTH,  lightScreen.y / SUN_HEIGHT);
+	textureManager.BindTexture2D("sunColorTexture", "lightScene", curr_program);
+
+	glBindVertexArray(vao[vao_index]);
+	glDrawArrays(GL_TRIANGLES, 0, 6);	
+	
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	//--------------------------------------------------------------------------------------
+	// Gaussian Blur with radius = 32
+	renderBlurTexture(blur_program, "sunColorTexture", "blur16ColorTexture", 16);
+	renderBlurTexture(blur_program, "sunColorTexture", "blur32ColorTexture", 24);
+	renderBlurTexture(blur_program, "sunColorTexture", "blur64ColorTexture", 32);
+	renderBlurTexture(blur_program, "sunColorTexture", "blurXColorTexture", 64);
+	renderBlurTexture(blur_program, "sunScatterColorTexture", "sunScatterColorTexture", 16);
+	
+	
+	// Render to a quad
+	curr_program = quad_program;
+	glUseProgram(curr_program);
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glViewport(0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+
+	textureManager.BindTexture2D("blur16ColorTexture", "blur16", curr_program);
+	textureManager.BindTexture2D("blur32ColorTexture", "blur32", curr_program);
+	textureManager.BindTexture2D("blur64ColorTexture", "blur64", curr_program);
+	textureManager.BindTexture2D("blurXColorTexture", "blurX", curr_program);
+	textureManager.BindTexture2D("sceneColorTexture", "scene", curr_program);
+	textureManager.BindTexture2D("sunScatterColorTexture", "lightScatter", curr_program);
+
+	glBindVertexArray(vao[vao_index]);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+	
+	/*
 	curr_program = fxaa_program;
 	glUseProgram(curr_program);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	/*
-	if (fullScreen)
-	{
-		const Screen screen = getScreenDimensions();
-		glViewport(0, 0, screen.width, screen.height);
-	}
-	else
-	{
-		glViewport(0, 0, VIEW_SIZE_WIDTH, VIEW_SIZE_HEIGHT);
-	}
-	*/
+	
 	glViewport(0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 	
 	glUniform2f(glGetUniformLocation(curr_program, "InverseFBOScreenRatio"), 1.f / SCENE_WIDTH, 1.f / SCENE_HEIGHT);
@@ -486,11 +614,13 @@ void render(){
 	
 	glBindVertexArray(vao[vao_index]);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
-
+	
+	*/
 	textureManager.unbindAllTextures();
-
+	
 	glutPostRedisplay();
 	glutSwapBuffers();
+	
 }
 
 string getScreenShotFileName(){
