@@ -10,11 +10,13 @@
 #include <glm\glm.hpp>
 #include <glm\gtx\transform.hpp>
 #include <glm\gtc\type_ptr.hpp>
+#include <glm\ext.hpp>
+#include <glm\gtx\string_cast.hpp>
 
 
 
 #define PI 3.14159
-#define MOVE_FACTOR 0.15f
+#define MOVE_FACTOR 0.5f
 
 using namespace std; 
 
@@ -61,8 +63,9 @@ public:
 		glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, false, glm::value_ptr(projection));
     }
 
-	//update cmaera lookat position in the shader
+	//update camera lookat position in the shader
 	void updateCamera(GLuint program){
+		//cout << glm::to_string(eye) << endl;
 		glUseProgram(program);
 		view = glm::lookAt(eye, lookAt, up);
 		glUniformMatrix4fv(glGetUniformLocation(program, "viewMatrix"), 1, false, glm::value_ptr(view));
@@ -74,6 +77,11 @@ public:
 
 	glm::mat4 getCameraProjectionMatrix(){
 		return projection;
+	}
+
+	glm::mat4 getCameraViewProjectionMatrix()
+	{
+		return projection * view;
 	}
 
     void moveCameraForward(){

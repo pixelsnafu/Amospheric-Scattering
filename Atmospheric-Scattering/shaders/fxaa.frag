@@ -5,6 +5,8 @@ noperspective in vec2 uv;
 uniform sampler2D scene;
 uniform vec2 InverseFBOScreenRatio;
 
+out vec4 frag_color;
+
 void main()
 {
 	float FXAA_SPAN_MAX = 8.0;
@@ -42,7 +44,7 @@ void main()
 	float lumaResult2 = dot(luma, result2);
 
 	if(lumaResult2 < lumaMin || lumaResult2 > lumaMax)
-		gl_FragColor = vec4(result1, 1.0);
+		frag_color = vec4(result1, 1.0);
 	else
-		gl_FragColor = vec4(result2, 1.0);
+		frag_color = vec4(result2, 1.0);
 }

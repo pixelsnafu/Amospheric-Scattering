@@ -86,13 +86,19 @@
   <ItemGroup>
     <None Include="shaders\atmosphere_shader.frag" />
     <None Include="shaders\atmosphere_shader.vert" />
+    <None Include="shaders\blur.frag" />
     <None Include="shaders\cloudmap_shader.frag" />
     <None Include="shaders\fxaa.frag" />
+    <None Include="shaders\lens_flare_halo.frag" />
     <None Include="shaders\normalmap_shader.frag" />
     <None Include="shaders\normalmap_shader.vert" />
+    <None Include="shaders\quad.frag" />
     <None Include="shaders\quad.vert" />
     <None Include="shaders\skybox.frag" />
     <None Include="shaders\skybox.vert" />
+    <None Include="shaders\sun.frag" />
+    <None Include="shaders\sun.vert" />
+    <None Include="shaders\sun_scatter.frag" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -6,6 +6,7 @@
 #include <gl/glew.h>
 #include <gl/GL.h>
 #include <SOIL.h>
+#include <stb_image_aug.h>
 
 #include <algorithm>
 #include <iostream>
@@ -14,6 +15,7 @@
 #include <mutex>
 #include <string>
 #include <vector>
+#include <cassert>
 
 
 using namespace std;
@@ -45,15 +47,18 @@ public:
 
 	static TextureManager& GetInstance();
 	void LoadTexture2D(string filename, string textureAlias);
+	void LoadTexture1D(string filename, string textureAlias);
 	void LoadTextureCubeMap(vector<string> textureFaces, string textureAlias);
 	void GenerateFBOTexture2D(string texAlias, int width, int height, bool isDepth = false);
 	void BindTexture2D(string texAlias, string sampler, GLuint program);
+	void BindTexture1D(string texAlias, string sampler, GLuint program);
 	void BindTextureCubeMap(string texAlias, string sampler, GLuint program);
 	void unbindTexture(string texAlias);
 	void unbindAllTextures();
 
 	const GLuint& operator[] (const string& texAlias)
 	{
+		assert(m_texIDMap.count(texAlias) != 0);
 		if (m_texIDMap.find(texAlias) == m_texIDMap.end())
 			return 0;
 		else

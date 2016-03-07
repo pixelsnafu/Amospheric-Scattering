@@ -125,7 +125,6 @@ void Object::addTriangle(Vec3f v1, Vec3f v2, Vec3f v3){
 	GLuint index2 = find(points.begin(), points.end(), v2) - points.begin();
 	GLuint index3 = find(points.begin(), points.end(), v3) - points.begin();
 
-
 	//calculate the face normal
 	Vec3f n1 = v2 - v1;
 	Vec3f n2 = v3 - v1;

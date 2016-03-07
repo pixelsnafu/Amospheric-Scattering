@@ -43,6 +43,40 @@ void TextureManager::GenerateFBOTexture2D(string texAlias, int width, int height
 	m_texIDMap.insert(make_pair(texAlias, textureID));
 }
 
+void TextureManager::LoadTexture1D(string filename, string textureAlias)
+{
+	int width, height, channel;
+	GLuint textureID;
+
+	glEnable(GL_TEXTURE_1D);
+
+	unsigned char* imgData = NULL;
+	imgData = SOIL_load_image(filename.c_str(), &width, &height, &channel, SOIL_LOAD_AUTO);
+
+	if (imgData == NULL)
+	{
+		cout << "Error loading Image: " << filename << endl;
+		exit(1);
+	}
+
+	glGenTextures(1, &textureID);
+	glBindTexture(GL_TEXTURE_1D, textureID);
+
+	glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	glTexImage1D(GL_TEXTURE_1D, 0, GL_RGB8, width, 0, GL_RGB, GL_UNSIGNED_BYTE, imgData);
+
+	SOIL_free_image_data(imgData);
+	
+	glBindTexture(GL_TEXTURE_1D, 0);
+	glDisable(GL_TEXTURE_1D);
+
+	m_texIDMap.insert(make_pair(textureAlias, textureID));
+}
+
 void TextureManager::LoadTexture2D(string filename, string textureAlias)
 {
 	int width, height;
@@ -55,7 +89,7 @@ void TextureManager::LoadTexture2D(string filename, string textureAlias)
 	
 	if (imgData == NULL)
 	{
-		cout << "Error loading Image!" << endl;
+		cout << "Error loading Image: " << filename << endl;
 		exit(1);
 	}
 	
@@ -125,8 +159,23 @@ void TextureManager::LoadTextureCubeMap(vector<string> textureFaces, string text
 	m_texIDMap.insert(make_pair(textureAlias, textureID));
 }
 
+void TextureManager::BindTexture1D(string texAlias, string sampler, GLuint program)
+{
+	assert(m_texIDMap.count(texAlias) != 0);
+	glUseProgram(program);
+	glEnable(GL_TEXTURE_1D);
+	GLuint currentTextureID = m_texIDMap.at(texAlias);
+	glActiveTexture(GL_TEXTURE0 + m_activeTextureCount);
+	glBindTexture(GL_TEXTURE_1D, currentTextureID);
+	glUniform1i(glGetUniformLocation(program, sampler.c_str()), m_activeTextureCount);
+	TextureUnit currTextureUnit = { GL_TEXTURE0 + m_activeTextureCount, GL_TEXTURE_1D, currentTextureID };
+	m_activeTextureUnits.push_back(currTextureUnit);
+	m_activeTextureCount++;
+}
+
 void TextureManager::BindTexture2D(string texAlias, string sampler, GLuint program)
 {
+	assert(m_texIDMap.count(texAlias) != 0);
 	glUseProgram(program);
 	glEnable(GL_TEXTURE_2D);
 	GLuint currentTextureID = m_texIDMap.at(texAlias);
@@ -140,6 +189,7 @@ void TextureManager::BindTexture2D(string texAlias, string sampler, GLuint progr
 
 void TextureManager::BindTextureCubeMap(string texAlias, string sampler, GLuint program)
 {
+	assert(m_texIDMap.count(texAlias) != 0);
 	glUseProgram(program);
 	glEnable(GL_TEXTURE_CUBE_MAP);
 	GLuint currentTextureID = m_texIDMap.at(texAlias);
@@ -153,6 +203,7 @@ void TextureManager::BindTextureCubeMap(string texAlias, string sampler, GLuint 
 
 void TextureManager::unbindTexture(string texAlias)
 {
+	assert(m_texIDMap.count(texAlias) != 0);
 	GLuint texID = m_texIDMap.at(texAlias);
 	auto currentTextureUnit = find_if(m_activeTextureUnits.begin(), m_activeTextureUnits.end(), [texID](const TextureUnit& t){
 		return t.m_ID == texID;

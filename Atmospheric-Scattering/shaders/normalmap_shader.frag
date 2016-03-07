@@ -1,4 +1,4 @@
-#version 400 core
+#version 450 core
 
 uniform sampler2D day;
 uniform sampler2D bumpMap;
@@ -18,7 +18,7 @@ in vec3 halfVec;
 in vec2 texCoord;
 
 in vec4 frontColor;
-in vec4 secondaryFrontColor;
+in vec4 frontSecondaryColor;
 
 in float cameraDistance;
 
@@ -39,20 +39,22 @@ void main()
     vec3 Emissive = normalize(-vPos);
     vec3 R = reflect(-L, N);
     float dotProd = max(dot(R, Emissive), 0.0);
-    vec4 specColor = spec * pow(dotProd,6.0) * 0.5;
+    //vec4 specColor = spec * pow(dotProd,6.0) * 0.5;
 	float diffuse = max(dot(N, L), 0.0);
+	vec4 specColor = spec * pow(diffuse, 32.0) * 0.6;
+	
 
 	vec2 cloudTexCoord			=	texCoord - vec2(yRotation/360, 0);
 
 	vec3 cloud_color			=	texture2D( clouds, cloudTexCoord ).rgb;
-	vec3 day_color				=	texture2D( day, texCoord ).rgb * diffuse + specColor.rgb * specMapColor.g - cloud_color * 0.35;// * (1 - cloud_color.r) + cloud_color.r * diffuse;
+	vec3 day_color				=	texture2D( day, texCoord ).rgb * diffuse + specColor.rgb * specMapColor.g - cloud_color * 0.5;// * (1 - cloud_color.r) + cloud_color.r * diffuse;
 	vec3 night_color			=	texture2D( night, texCoord ).rgb * 10;// * (1 - cloud_color.r) * 0.5;
 	
 	vec3 color = day_color;
 
 	// TODO : Declare tweaking constants as separate variables
 	vec4 frontAtm = mix(frontColor * 0.01, frontColor * cameraDistance, (diffuse + 0.1) * 5.0);
-	vec4 secondaryAtm = mix(secondaryFrontColor * 0.01, secondaryFrontColor * 0.3, (diffuse + 0.1) * 5.0);
+	vec4 secondaryAtm = mix(frontSecondaryColor * 0.01, frontSecondaryColor * 0.3, (diffuse + 0.1) * 5.0);
 	if(dot(N, L) < 0.1)
 		color = mix(night_color, day_color, (diffuse + 0.1) * 5.0);
 	//frag_color = secondaryAtm;

@@ -12,7 +12,7 @@ const float kVelocityPower = 3.0;
 
 noperspective in vec2 uv;
 
-
+out vec4 frag_color;
 
 /*----------------------------------------------------------------------------*/
 /*	Incremental, forward-differencing Gaussian elimination based on:
@@ -57,5 +57,5 @@ vec4 incrementalGauss1D(
 /*----------------------------------------------------------------------------*/
 void main() {
 	vec2 texelSize = 1.0 / vec2(textureSize(uInputTex, 0));
-	gl_FragColor = incrementalGauss1D(uInputTex, texelSize, uv, uBlurRadius, uBlurDirection); 
+	frag_color = incrementalGauss1D(uInputTex, texelSize, uv, uBlurRadius, uBlurDirection); 
 }

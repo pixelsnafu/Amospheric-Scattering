@@ -1,4 +1,4 @@
-#version 400 core
+#version 450 core
 
 in vec3 vPosition;
 in vec2 vTexCoord;
@@ -41,7 +41,7 @@ out vec3 vNorm;
 out vec3 lPos;
 
 out vec4 frontColor;
-out vec4 secondaryFrontColor;
+out vec4 frontSecondaryColor;
 out float cameraDistance;
 
 float scale(float fCos)
@@ -54,10 +54,10 @@ void main()
 {
 
 	mat4 modelView = view * model;
-	mat4 normalMatrix = transpose(inverse(model));
+	mat3 normalMatrix = mat3(transpose(inverse(model)));
 
-	vec3 n = normalize ( ( normalMatrix * vec4( vNormal, 0.0 ) ).xyz );
-	vec3 t = normalize ( ( normalMatrix * vec4( vTangent, 0.0 ) ).xyz );
+	vec3 n = normalize ( normalMatrix * vNormal );
+	vec3 t = normalize ( normalMatrix * vTangent );
 	vec3 b = cross (n, t);
 	
 	vec4 vertexInEye = modelView * vec4(vPosition, 1.0);
@@ -142,7 +142,7 @@ void main()
 
 	// Now loop through the sample rays
 	vec3 v3FrontColor = vec3(0.0);
-	vec3 v3Attenuate;
+	vec3 v3Attenuate = vec3(0.0);
 	for(int i = 0; i < Samples; i++)
 	{
 		float fHeight = length(v3SamplePoint);
@@ -159,7 +159,7 @@ void main()
 
 	frontColor.rgb = v3FrontColor * (v3InvWavelength * fKrESun + fKmESun);
 	// Calculate the attenuation factor for the ground
-	secondaryFrontColor.rgb = v3Attenuate;
+	frontSecondaryColor.rgb = v3Attenuate;
 
 	gl_Position = projection * modelView * vec4(vPosition, 1.0);
 }

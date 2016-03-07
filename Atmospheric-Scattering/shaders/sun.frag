@@ -2,10 +2,12 @@
 
 uniform int isSun;
 
+out vec4 frag_color;
+
 void main()
 {
 	if (isSun == 1)
-		gl_FragColor = vec4(1.0, 0.941, 0.898, 1.0);
+		frag_color = vec4(1.0, 0.941, 0.898, 1.0);
 	else
-		gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+		frag_color = vec4(0.0, 0.0, 0.0, 1.0);
 }

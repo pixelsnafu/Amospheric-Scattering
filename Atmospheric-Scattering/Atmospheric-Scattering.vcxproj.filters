@@ -67,5 +67,11 @@
     <None Include="shaders\atmosphere_shader.frag" />
     <None Include="shaders\quad.vert" />
     <None Include="shaders\fxaa.frag" />
+    <None Include="shaders\sun_scatter.frag" />
+    <None Include="shaders\blur.frag" />
+    <None Include="shaders\quad.frag" />
+    <None Include="shaders\sun.frag" />
+    <None Include="shaders\sun.vert" />
+    <None Include="shaders\lens_flare_halo.frag" />
   </ItemGroup>
 </Project>
